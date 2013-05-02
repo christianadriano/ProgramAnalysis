@@ -13,18 +13,22 @@ import soot.toolkits.graph.BlockGraph;
  * Implements the worklist algorithm to execute a constant propagation analysis.
  * 
  * @author Christian Adriano
- *
  */
-
-
 public class Analysis {
 
 	static final String MUST = "MUST";
 	static final String MAY = "MAY";
 	private String type; 
 	
+	/** The list of all freeVariables */
 	HashMap<String,Value> fvList= new HashMap<String,Value>();
+	
+	/** Keeps the list of edges to be processed*/
 	WorkList workList = new WorkList();
+	
+	/** Keeps the results for each statement */
+	ArrayList<HashMap<String,Value>> AnalysisList = new ArrayList<HashMap<String,Value>>();
+	
 	BlockGraph graph; //this is initialized by the constructor
 	private Body body;
 	 
@@ -43,7 +47,12 @@ public class Analysis {
 		//http://stackoverflow.com/questions/6792305/identify-loops-in-java-byte-code
 	}
 	
-	public void initializeWorkList(){}
+	/**
+	 * Traverses the call graph to include edges in the WorkList and the AnalysisList
+	 */
+	public void initializeLists(){
+		
+	}
 	
 	
 	/** Method iterates through the body of a program to find the free variables, 
@@ -64,9 +73,6 @@ public class Analysis {
 				if(unit instanceof soot.jimple.internal.JAssignStmt){
 					fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Value(true,this.type));
 				}
-				
-				//else
-				//	System.out.println("Just Unit = "+unit.toString());
 			}
 		}
 		

@@ -6,6 +6,7 @@ import soot.Body;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.JimpleBody;
+import soot.jimple.internal.JAssignStmt;
 import soot.toolkits.graph.BlockGraph;
 
 /**
@@ -49,7 +50,7 @@ public class Analysis {
 	 * which are the variables at the left hand side of the statements.
 	 * @return array of free variable names as primitive string type.
 	 */
-	public ArrayList obtainFreeVariables(){
+	public HashMap<String, Value> obtainFreeVariables(){
 		
 		fvList= new HashMap<String,Value>();
 		SootMethod m = (SootMethod)body.getMethod();
@@ -61,12 +62,13 @@ public class Analysis {
 				System.out.println("Unit:"+unit.toString());
 				
 				if(unit instanceof soot.jimple.internal.JAssignStmt){
-					fvList.put((Unit)stmt.leftBox.getValue(),new Value(true,this.type));
+					fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Value(true,this.type));
 				}
 				
 				//else
 				//	System.out.println("Just Unit = "+unit.toString());
 			}
+		}
 		
 		return fvList;
 	}

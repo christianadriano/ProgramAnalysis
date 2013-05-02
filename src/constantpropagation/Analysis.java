@@ -2,6 +2,10 @@ package constantpropagation;
 
 import java.util.*;
 
+import soot.Body;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.JimpleBody;
 import soot.toolkits.graph.BlockGraph;
 
 /**
@@ -10,14 +14,24 @@ import soot.toolkits.graph.BlockGraph;
  * @author Christian Adriano
  *
  */
+
+
 public class Analysis {
 
-	HashMap latticeMap= new HashMap();
-	ArrayList workList = new ArrayList();
-	BlockGraph graph; //this is initialized by the constructor
+	static final String MUST = "MUST";
+	static final String MAY = "MAY";
+	private String type; 
 	
-	public Analysis(BlockGraph graph) {
+	HashMap<String,Value> fvList= new HashMap<String,Value>();
+	WorkList workList = new WorkList();
+	BlockGraph graph; //this is initialized by the constructor
+	private Body body;
+	 
+	
+	public Analysis(BlockGraph graph, Body body, String analysisType) {
 		this.graph=graph;
+		this.body=body;
+		this.type = analysisType;	
 	}
 
 	//How to navigate the callGraph? Maybe I can use the UnitIterator itself. Check what the UnitIterator does 
@@ -37,7 +51,22 @@ public class Analysis {
 	 */
 	public ArrayList obtainFreeVariables(){
 		
-		ArrayList<String> fvList = new ArrayList<String>();
+		fvList= new HashMap<String,Value>();
+		SootMethod m = (SootMethod)body.getMethod();
+		if(m.isConcrete()){
+			JimpleBody jbody = (JimpleBody) m.retrieveActiveBody();
+			Iterator<Unit> unitIt = jbody.getUnits().iterator();
+			while(unitIt.hasNext()){
+				Unit unit = (Unit) unitIt.next();
+				System.out.println("Unit:"+unit.toString());
+				
+				if(unit instanceof soot.jimple.internal.JAssignStmt){
+					fvList.put((Unit)stmt.leftBox.getValue(),new Value(true,this.type));
+				}
+				
+				//else
+				//	System.out.println("Just Unit = "+unit.toString());
+			}
 		
 		return fvList;
 	}

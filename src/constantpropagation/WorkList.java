@@ -1,6 +1,8 @@
 package constantpropagation;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 
@@ -11,8 +13,12 @@ import java.util.LinkedList;
  */
 public class WorkList {
 
-	HashSet<Edge> edgeSet = new HashSet<Edge>();
+	/** Set of unique elements. It serves to help keep the linked list free from clones */
+	HashMap<String,Edge> edgeMap = new HashMap<String,Edge>();
 	
+	/** Order list of elements. It works as First In First Out list, 
+	 * in other words, we remove always the head (first element) and add at tail (last element)
+	 */
 	LinkedList<Edge> edgeList = new LinkedList<Edge>();
 	
 	/**
@@ -20,9 +26,9 @@ public class WorkList {
 	 * @return an edge if it is not empty, otherwise null
 	 */
 	public Edge extract(){
-		if(!edgeSet.isEmpty()){
+		if(!edgeMap.isEmpty()){
 			Edge edge = edgeList.getFirst();
-			edgeSet.remove(edge);
+			edgeMap.remove(edge.getKey());
 			edgeList.removeFirst();
 			return edge;
 		}
@@ -35,15 +41,27 @@ public class WorkList {
 	 * @return true if the edge is new to the list, otherwise false
 	 */
 	public boolean insert(Edge edge){
-		if(edgeSet.contains(edge))
+		if(edgeMap.containsKey(edge.getKey()))
 			return false;
 		else{
-			edgeSet.add(edge);
+			edgeMap.put(edge.getKey(),edge);
 			edgeList.add(edge);
+			//System.out.println("Insert:"+edge);
 			return true;
 		}
 	}
 	
 	
-
+	/** Better format to display results in the console */
+	public String toString(){
+		String result="";
+		Iterator<Edge> iter = this.edgeList.iterator();
+		while(iter.hasNext()){
+			Edge edge = (Edge) iter.next();
+			result = result+"\n"+edge.getKey();
+		}
+		result.substring(0, result.length()-1);
+		return result;
+		
+	}
 }

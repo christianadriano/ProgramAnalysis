@@ -53,56 +53,13 @@ public class MainSootProject2 {
 		
 		PackManager.v().getPack("jap").add(new Transform("jap.profiler", 
 				new BodyTransformer(){
-			protected void internalTransform(Body body, String phase, Map options) {
-				System.out.println("Constant Propagation result ---------------------------");
-				
-				System.out.println("**** Blocks ****");
+			protected void internalTransform(Body body, String phase, Map options) {				
 		        BlockGraph blockGraph = new ExceptionalBlockGraph(body);
-		        Analysis analysis= new Analysis(blockGraph);
-		        
-		        for (Block block : blockGraph.getBlocks()) {
-		            System.out.println("-------------------------------------------------");
-		        	System.out.println("Block:  "+block);
-		            Iterator<Unit> unitIt =  block.iterator();
-		            while(unitIt.hasNext()){
-						Unit unit = (Unit) unitIt.next();
-						System.out.println("Unit:  "+unit.toString());
-		            }
-		            System.out.println("-------------------------------------------------");
+		        Analysis analysis= new Analysis(blockGraph, body, Analysis.MAY);
+		        if(analysis.hasFreeVariables()){
+		        	analysis.run();
+		        	analysis.printResult();
 		        }
-		        System.out.println();
-				
-		       /** LoopNestTree loopNestTree = new LoopNestTree(body);
-		        for (Loop loop : loopNestTree) {
-		            System.out.println("Found a loop with head: " + loop.getHead());
-		        }
-		        
-		        System.out.println("**** Body ****");
-		        System.out.println(body);
-		        System.out.println();
-		        */
-/*				SootMethod m = (SootMethod)body.getMethod();
-				if(m.isConcrete()){
-					JimpleBody jbody = (JimpleBody) m.retrieveActiveBody();
-					Iterator unitIt = jbody.getUnits().iterator();
-					while(unitIt.hasNext()){
-						Unit unit = (Unit) unitIt.next();
-						System.out.println("Unit:"+unit.toString());
-						
-						if(unit instanceof soot.jimple.internal.JAssignStmt){
-							//System.out.println("JAssignStatement = "+unit.toString());
-							//performConstantPropagationAnalysis((JAssignStmt)unit);
-						}
-						
-						//else
-						//	System.out.println("Just Unit = "+unit.toString());
-					}
-				}
-				//for (Unit u : body.getUnits()) {
-				//	System.out.println(u.getTags());
-				//}
-			}
-			*/
 		}}));
 		Options.v().set_verbose(false);
 		PhaseOptions.v().setPhaseOption("jap.npc", "on");

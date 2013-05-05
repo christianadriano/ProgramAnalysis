@@ -11,7 +11,7 @@ import java.util.LinkedList;
  * @author Christian Adriano
  *
  */
-public class WorkList {
+public class WorkList{
 
 	/** Set of unique elements. It serves to help keep the linked list free from clones */
 	HashMap<String,Edge> edgeMap = new HashMap<String,Edge>();
@@ -51,6 +51,10 @@ public class WorkList {
 		}
 	}
 	
+
+	public boolean hasElements(){
+		return ! this.edgeList.isEmpty();
+	}
 	
 	/** Better format to display results in the console */
 	public String toString(){

@@ -1,22 +1,24 @@
 package constantpropagation;
 
-public class Value {
+public class Content {
 
 	
 	public static final String BOTTOM = "BOTTOM";
 	public static final String TOP = "TOP";
+	public static final String NUMBER = "NUMBER";
 	private static String INITIALIZE;
+	
 			
 	private String type;
 	public boolean isExtreme;		
 	private int number;
 	
-	public Value(boolean isExtreme, String analysisType) {
+	public Content(boolean isExtreme, String analysisType) {
 		this.isExtreme = isExtreme;
 		if(analysisType.compareTo(Analysis.MUST)==0)
-			this.type= Value.TOP;
+			this.type= Content.TOP;
 		else
-			this.type = Value.BOTTOM;
+			this.type = Content.BOTTOM;
 
 	}
 
@@ -27,6 +29,7 @@ public class Value {
 	public void setNumber(int number) {
 		isExtreme=false;
 		this.number = number;
+		this.type = this.NUMBER;
 	}
 
 	public String getType() {

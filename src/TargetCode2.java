@@ -13,7 +13,7 @@ public class TargetCode2 {
 	
 	public void compute() {
 			
-		int x = 1; 
+		int x = 1;
 		int y = 4*x;
 		if (x == 1){
 			y = 7; 

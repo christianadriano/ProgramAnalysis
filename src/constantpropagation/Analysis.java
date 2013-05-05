@@ -1,9 +1,11 @@
 package constantpropagation;
 
 import java.util.*;
+
 import soot.Body;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.JimpleBody;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JInvokeStmt;
@@ -23,18 +25,21 @@ public class Analysis {
 	static final String MAY = "MAY";
 	private String type; 
 	
-	/** Initial list of all freeVariables */
-	HashMap<String,Value> fvList= new HashMap<String,Value>();
+	/** Initial list of all freeVariables. <Variable name, Value of the Variable>*/
+	HashMap<String,Content> fvList= new HashMap<String,Content>();
 	
 	/** Keeps the list of edges to be processed*/
 	WorkList workList = new WorkList();
 	
-	/** Keeps the results for each statement */
-	HashMap<Unit,HashMap<String,Value>> analysisMap = new HashMap<Unit,HashMap<String,Value>>();
+	/** Keeps the list of edges of the program. This list is created once and never changes.*/
+	EdgeList edgeList = new EdgeList();
 	
-	/** Keeps the list of statements in order of occurence so we can display the results in the same order
-	 * they appear in the source code listing */
-	ArrayList<Unit> analysisList = new ArrayList<Unit>();
+	/** Keeps the results for each statement */
+	HashMap<String,Lattice> analysisMap = new HashMap<String,Lattice>();
+	
+	/** Keeps the list of labels corresponding to the statements in order of occurence so 
+	 * we can display the results in the same order they appear in the source code listing */
+	ArrayList<String> analysisList = new ArrayList<String>();
 	
 	/**Blocks are the entities in Soot that effectively keep track of succession and 
 	 * predecession (both at block as well as at unit level*/ 
@@ -56,8 +61,24 @@ public class Analysis {
 	
 	public void run(){
 		initializeAnalysisList(this.fvList);
-		WorkListFactory factory = new WorkListFactory(this.graph);
-		factory.buildList(this.workList);
+		WorkListFactory factory = new WorkListFactory();
+		factory.setupFactory(this.graph, this.workList, this.edgeList);
+		factory.buildLists();
+		this.workList=factory.getWorkList();
+		this.edgeList=factory.getEdgeList();
+		Join join = new Join();
+		/*while(workList.hasElements()){
+			Edge edge = workList.extract();
+			String label=edge.startLabel;
+			Lattice entryLattice = this.analysisMap.get(label);
+			
+			//ArrayList<Lattice> predExistList = obtainPredecessorsExits(label);
+			HashMap<String,Edge> arrivingEdges = edgeList.getArrivingEdges(label);
+			join.setupAnalysis(this.type, entryLattice, arrivingEdges);
+			Lattice newEntryLattice = join.join();
+			//killCompute(edge)
+			//if (!OriginalLattice.equals(CurrentLattice)) workList.insertAllEdgesWithEntryLabel(label); //Restore to worklist all edges with the label whose lattice changed
+		}*/
 	}
 
 	/** Define a unique Tag for each Unit so we might identify them uniquely without
@@ -80,16 +101,14 @@ public class Analysis {
 	 * which are the variables at the left hand side of the statements.
 	 * @return array of free variable names as primitive string type.
 	 */
-	public HashMap<String,Value> initializeFreeVariablesLattice(){
-		fvList= new HashMap<String,Value>();
+	public HashMap<String,Content> initializeFreeVariablesLattice(){
+		fvList= new HashMap<String,Content>();
 		Iterator<Unit> unitIter=getUnits();
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
 			if(unit instanceof soot.jimple.internal.JAssignStmt){
-				fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Value(true,this.type));
-				
+				fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Content(true,this.type));
 				System.out.println("Unit: "+ unit+", Oper: "+((JAssignStmt)unit).getRightOp());
-
 			}
 			else 
 				System.out.println("Non Assignment Statement: "+unit);
@@ -100,12 +119,15 @@ public class Analysis {
 	/** Iterates through the graph and obtains each program statement (which is a Unit in Soot).
 	 * For each associates the Initial Lattice with it.
 	 */
-	public void initializeAnalysisList(HashMap<String,Value> initialValues){
+	public void initializeAnalysisList(HashMap<String,Content> initialValues){
 		Iterator<Unit> unitIter = getUnits();
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
-			this.analysisMap.put(unit,fvList);
-			this.analysisList.add(unit);
+			Lattice lattice  = new Lattice(unit,fvList);
+			List<Tag> list = unit.getTags();
+			String label = ((CodeAttribute) list.get(0)).getName();
+			this.analysisMap.put(label,lattice);
+			this.analysisList.add(label);
 		}
 	}
 	
@@ -125,9 +147,9 @@ public class Analysis {
 		System.out.println("Constant Propagation Results <Statement : Free Variable Values>");
 		System.out.println("Analysis Type: "+ this.type);
 		System.out.println("-----------------------------------------------------------------");
-		for(Unit unit : analysisList){
-			HashMap<String, Value> lattice = analysisMap.get(unit);
-			System.out.println("< Unit:"+unit.toString()+" = "+ lattice+">");
+		for(String label : analysisList){
+			Lattice lattice = analysisMap.get(label);
+			System.out.println("<"+lattice.unit.toString()+">  ==  "+ lattice.fvMap);
 		}
 		System.out.println("-----------------------------------------------------------------");
 	}
@@ -141,6 +163,7 @@ public class Analysis {
 		}
 	}
 	
+	
 	/** Obtains the new values for the lattice by computing it with a new entry
 	 * 
 	 * @param entry values for free variables changed by the predecessors
@@ -150,8 +173,9 @@ public class Analysis {
 		
 		Value newValue=null;
 		
-		//Obtain the leftside
+		//Obtain the right side of the statement
 		Value value = ((JAssignStmt)unit).getRightOp();
+		System.out.println("Dentro de killCompute, obtive, value: " + value);
 		
 		//Obtain the variables in the left side
 		//Obtain the operations

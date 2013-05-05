@@ -12,7 +12,7 @@ public class TargetCode2 {
 	
 	
 	public void compute() {
-				
+			
 		int x = 1; 
 		int y = 4*x;
 		if (x == 1){
@@ -24,7 +24,8 @@ public class TargetCode2 {
 		while (x > 0) {
 			x=x-1;
 		}
-		x = 3; 
+		x = 1+Integer.compare(1, 2);
+		return;
 	}
 
 }

@@ -49,4 +49,9 @@ public class Edge {
 	public String getKey(){
 		return("("+startLabel+","+endLabel+")");
 	}
+
+	public String getContentKey(){
+	//	return("("+startLabel+","+endLabel+")"+": ("+startUnit+")");//+endUnit+")");
+		return("("+startLabel+"="+startUnit+")");//+endUnit+")");
+	}
 }

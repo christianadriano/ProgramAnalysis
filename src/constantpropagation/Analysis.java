@@ -6,6 +6,8 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.JimpleBody;
 import soot.jimple.internal.JAssignStmt;
+import soot.jimple.internal.JInvokeStmt;
+import soot.jimple.internal.JStaticInvokeExpr;
 import soot.tagkit.CodeAttribute;
 import soot.tagkit.Tag;
 import soot.toolkits.graph.BlockGraph;
@@ -85,7 +87,12 @@ public class Analysis {
 			Unit unit = (Unit) unitIter.next();
 			if(unit instanceof soot.jimple.internal.JAssignStmt){
 				fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Value(true,this.type));
+				
+				System.out.println("Unit: "+ unit+", Oper: "+((JAssignStmt)unit).getRightOp());
+
 			}
+			else 
+				System.out.println("Non Assignment Statement: "+unit);
 		}
 		return fvList;
 	}
@@ -132,6 +139,24 @@ public class Analysis {
 			System.out.println("Lattice initialized to:"+ fvList);
 			return !(this.fvList.isEmpty());
 		}
+	}
+	
+	/** Obtains the new values for the lattice by computing it with a new entry
+	 * 
+	 * @param entry values for free variables changed by the predecessors
+	 * @return the new value for the free variable being assigned in the statement
+	 */
+	public Value killComputeExpression(Lattice entry, String freeVariable, Unit unit){
+		
+		Value newValue=null;
+		
+		//Obtain the leftside
+		Value value = ((JAssignStmt)unit).getRightOp();
+		
+		//Obtain the variables in the left side
+		//Obtain the operations
+		
+		return newValue;
 	}
 	
 }

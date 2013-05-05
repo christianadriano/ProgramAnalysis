@@ -25,7 +25,7 @@ public class WorkListFactory {
 			List<Block >predBlockList = block.getPreds();
 			List<Block >succBlockList = block.getSuccs();
 			//System.out.println("-------------------------------------------------");
-			//System.out.println("Block:  "+block);
+			System.out.println("Block:  "+block);
 			Iterator<Unit> unitIt =  block.iterator();
 			Edge edge;
 			while(unitIt.hasNext()){

@@ -1,4 +1,4 @@
-package constantpropagation;
+package constpropag;
 
 import java.util.*;
 
@@ -22,8 +22,8 @@ import soot.toolkits.graph.BlockGraph;
  */
 public class Analysis {
 
-	static final String MUST = "MUST";
-	static final String MAY = "MAY";
+	public static final String MUST = "MUST";
+	public static final String MAY = "MAY";
 	private String type; 
 	
 	/** Initial list of all freeVariables. <Variable name, Value of the Variable>*/

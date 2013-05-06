@@ -5,8 +5,8 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import constantpropagation.Content;
-import constantpropagation.Join;
+import constpropag.Content;
+import constpropag.Join;
 
 public class JoinTest {
 

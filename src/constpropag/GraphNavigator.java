@@ -1,4 +1,4 @@
-package constantpropagation;
+package constpropag;
 import soot.Body;
 import soot.Scene;
 import soot.SootClass;

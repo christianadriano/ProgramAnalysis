@@ -1,5 +1,3 @@
-import constantpropagation.MainSootProject2;
-
 
 /**
  * Code to be analyzed by Soot for Project-2 

@@ -1,4 +1,4 @@
-package constantpropagation;
+
 import soot.Body;
 import soot.BodyTransformer;
 import soot.PackManager;
@@ -15,7 +15,7 @@ import soot.toolkits.graph.Block;
 import soot.toolkits.graph.BlockGraph;
 import soot.toolkits.graph.ExceptionalBlockGraph;
 import soot.toolkits.graph.LoopNestTree;
-import constantpropagation.*;
+import constpropag.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,9 +27,9 @@ import java.util.*;
  * @author Christian Adriano
  *
  */
-public class MainSootProject2 {
+public class MainSoot {
 
-	public MainSootProject2() {}
+	public MainSoot() {}
 
 	public static void main(String[] args){
 		args = new String[1];

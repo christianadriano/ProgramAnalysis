@@ -1,4 +1,4 @@
-package constantpropagation;
+package constpropag;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package constantpropagation;
+package constpropag;
 
 public class Content {
 

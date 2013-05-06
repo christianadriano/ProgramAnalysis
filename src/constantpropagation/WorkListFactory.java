@@ -35,7 +35,7 @@ public class WorkListFactory {
 			List<Block >predBlockList = block.getPreds();
 			List<Block >succBlockList = block.getSuccs();
 			//System.out.println("-------------------------------------------------");
-			System.out.println("Block:  "+block);
+			//System.out.println("Block:  "+block);
 			Iterator<Unit> unitIt =  block.iterator();
 			Edge edge;
 			while(unitIt.hasNext()){
@@ -46,17 +46,17 @@ public class WorkListFactory {
 					linkHeadUnitToPedecessors(unit,predBlockList);
 				}
 				else if((unitPred==null)&&(predBlockList.isEmpty())){ //Means unit is the first node in the graph
-					edge=new Edge(null, unit);
-					workList.insert(edge);
-					edgeList.insert(edge);
+					//edge=new Edge(null, unit);
+					//workList.insert(edge);
+					//edgeList.insert(edge);
 				}
 				else if ((unitSucc == null)&&(!succBlockList.isEmpty())){ //Means unit is the last node in the block
 						linkHeadUnitToSuccessors(unit,succBlockList);
 					}
 					else if ((unitSucc == null)&&(succBlockList.isEmpty())){ //Means unit is the last node in the graph
-						edge=new Edge(unit,null);
-						workList.insert(edge);
-						edgeList.insert(edge);
+						//edge=new Edge(unit,null);
+						//workList.insert(edge);
+						//edgeList.insert(edge);
 					}else
 						if((unitPred!=null)&&(unitSucc!=null)){//Means the node in the middle of a block
 							edge=new Edge(unitPred,unit);

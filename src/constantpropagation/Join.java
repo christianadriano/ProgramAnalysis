@@ -3,7 +3,13 @@ package constantpropagation;
 import java.util.HashMap;
 import java.util.Iterator;
 
-/** Executes a Join for a MUST or MAY analysis */
+ 
+
+/**
+ * Executes a Join for a MUST or MAY analysis 
+ * @author Christian Adriano
+ *
+ */
 public class Join {
 
 	private String type;
@@ -15,40 +21,134 @@ public class Join {
 	private HashMap<String,HashMap<String,String>> mustTable;
 	
 	private HashMap<String,HashMap<String,String>> mayTable;
+
+	private HashMap<String, Lattice> analysisMap;
 	
 	public Join(){
 		initMustTable();
 		initMayTable();
 	}
 	
-	public void setupAnalysis(String type, Lattice entrylattice, HashMap arrivingEdges){
+	public void setupAnalysis(String type, Lattice entryLattice, HashMap<String,Edge> arrivingEdges, HashMap<String,Lattice> analysisMap){
 		this.type = type;
 		this.entryLattice = entryLattice;
 		this.arrivingEdges = arrivingEdges;
+		this.analysisMap = analysisMap;
 	}
 	
-	public Lattice join(){
-		if((type==null)||(entryLattice==null)||(arrivingEdges==null)) 
+	protected Lattice join(){
+		if((type==null)||(entryLattice==null)) //Failure to initialize Join analysis.
 			return null;
+		else if (arrivingEdges==null) //it is the first node in the graph or it is a desconneted node.
+			return this.entryLattice; // does not change the initial lattice by the join operation.
+		else{
+			Lattice resultLattice=this.entryLattice;
+			Iterator<String> iter = arrivingEdges.keySet().iterator();
+			while(iter.hasNext()){
+				String key = iter.next();
+				Edge predEdge = arrivingEdges.get(key);
+				String predLabel= predEdge.startLabel;
+				Lattice predLabelLattice = this.analysisMap.get(predLabel);
+				
+				Iterator<String> iterFV = predLabelLattice.fvMap.keySet().iterator();
+				//Traverse both lattices performing MEET operations (which can be INTERSECTION or UNION)
+				while(iterFV.hasNext()){
+					String fvKey = iterFV.next();
+					Content resultContent = resultLattice.getFreeVariableValue(fvKey);
+					Content predContent = predLabelLattice.getFreeVariableValue(fvKey);
+				
+					if(this.type.compareTo(Analysis.MUST)==0){
+						resultContent = intersect(resultContent,predContent);
+					}
+					else
+						if (this.type.compareTo(Analysis.MAY)==0){
+							resultContent = union(resultContent,predContent);
+						}
+					resultLattice.setFreeVariableValue(fvKey, resultContent);
+				}
+			}
+			return resultLattice;
+		}
+	}
+	
+	
+	public Content intersect(Content entry, Content pred){
 		
-		if(type.compareTo(Analysis.MAY)==0)
-			return mayJoin();
-		else
-			if(type.compareTo(Analysis.MUST)==0)
-				return mustJoin();
-			else return null;
-					
+		String typeEntry = entry.getType();
+		String typePred = pred.getType();
+		
+		HashMap<String,String> cell = this.mustTable.get(typeEntry);
+		String cellValue = cell.get(typePred);
+		
+		Content result;
+		
+		if(cellValue==null){//Situation 
+			if(entry.getNumber() == pred.getNumber()){
+				result= new Content(Content.NUMBER);
+				result.setNumber(entry.getNumber());
+				return result;
+			}
+			else{
+				result = new Content(Content.BOTTOM);
+				return result;
+			}
+		}
+		else{
+			if(cellValue.compareTo(Content.NUMBER)==0){
+				result = new Content(Content.NUMBER);
+				if(entry.getType().compareTo(Content.NUMBER)==0)
+					result.setNumber(entry.getNumber());
+				else
+					result.setNumber(pred.getNumber());
+				return result;
+			}
+			else{
+				result= new Content(cellValue);
+				return result;
+			}
+		}
 	}
-	
-	protected Lattice mustJoin(){
-		Lattice resultLattice=null;
-		return resultLattice;
-	}
-	
 	
 	protected Lattice mayJoin(){
 		Lattice resultLattice=null;
 		return resultLattice;
+	}
+	
+	public Content union(Content entry, Content pred){
+		
+		String typeEntry = entry.getType();
+		String typePred = pred.getType();
+		
+		HashMap<String,String> cell = this.mayTable.get(typeEntry);
+		String cellValue = cell.get(typePred);
+		
+		Content result;
+		
+		if(cellValue==null){//Situation 
+			if(entry.getNumber() == pred.getNumber()){
+				result= new Content(Content.NUMBER);
+				result.setNumber(entry.getNumber());
+				return result;
+			}
+			else{
+				result = new Content(Content.TOP);
+				return result;
+			}
+		}
+		else{
+			if(cellValue.compareTo(Content.NUMBER)==0){
+				result = new Content(Content.NUMBER);
+				if(entry.getType().compareTo(Content.NUMBER)==0)
+					result.setNumber(entry.getNumber());
+				else
+					result.setNumber(pred.getNumber());
+				return result;
+			}
+			else{
+				result= new Content(cellValue);
+				return result;
+			}
+		}
 	}
 	
 	

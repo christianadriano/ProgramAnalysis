@@ -19,7 +19,7 @@ public class WorkList{
 	/** Order list of elements. It works as First In First Out list, 
 	 * in other words, we remove always the head (first element) and add at tail (last element)
 	 */
-	LinkedList<Edge> edgeList = new LinkedList<Edge>();
+	LinkedList<Edge> edgeWorkList = new LinkedList<Edge>();
 	
 	/**
 	 * 
@@ -27,9 +27,9 @@ public class WorkList{
 	 */
 	public Edge extract(){
 		if(!edgeMap.isEmpty()){
-			Edge edge = edgeList.getFirst();
+			Edge edge = edgeWorkList.getFirst();
 			edgeMap.remove(edge.getKey());
-			edgeList.removeFirst();
+			edgeWorkList.removeFirst();
 			return edge;
 		}
 		else return null;
@@ -45,7 +45,7 @@ public class WorkList{
 			return false;
 		else{
 			edgeMap.put(edge.getKey(),edge);
-			edgeList.add(edge);
+			edgeWorkList.add(edge);
 			//System.out.println("Insert:"+edge);
 			return true;
 		}
@@ -53,19 +53,48 @@ public class WorkList{
 	
 
 	public boolean hasElements(){
-		return ! this.edgeList.isEmpty();
+		return ! this.edgeWorkList.isEmpty();
 	}
-	
+
 	/** Better format to display results in the console */
 	public String toString(){
-		String result="";
-		Iterator<Edge> iter = this.edgeList.iterator();
-		while(iter.hasNext()){
-			Edge edge = (Edge) iter.next();
-			result = result+"\n"+edge.getKey();
-		}
-		result.substring(0, result.length()-1);
-		return result;
 		
+		if(!hasElements())
+			return "WorkList is EMPTY!";
+		else{
+			String result="";
+			Iterator<Edge> iter = this.edgeWorkList.iterator();
+			while(iter.hasNext()){
+				Edge edge = (Edge) iter.next();
+				if(edge!=null)
+					result = result+"\n"+edge.getKey();
+				else
+					result = result+"\n"+"null";
+			}
+
+			if(result.length()>0)
+				result.substring(0, result.length()-1);
+			return result;
+		}
 	}
+
+	
+	/** Update the worklist with all edges which have as entry the provided label
+	 * @param label entry node
+	 * @param programEdgeList the list of all edges in the program
+	 */
+	public void insertAllEdgesWithEntryLabel(String label, EdgeList programEdgeList) {
+		if(label!=null){
+			HashMap<String,Edge>successorMap = programEdgeList.getDependantEdges(label);
+			Iterator<String> keyIter = successorMap.keySet().iterator();
+			while(keyIter.hasNext()){
+				String key = keyIter.next();
+				Edge edge = successorMap.get(key);
+				this.edgeWorkList.add(edge);
+				this.edgeMap.put(edge.getKey(), edge);
+				//System.out.println("re-inserted: "+edge.getKey());
+			}
+		}
+	}
+	
 }

@@ -1,6 +1,7 @@
 package constantpropagation;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import soot.Unit;
@@ -43,6 +44,7 @@ public class Lattice {
 		else return false;
 	}
 	
+	
 	/**
 	 * @param freeVariable
 	 * @return the value of the variable. If no variable with the provided name exists, returns null.
@@ -51,5 +53,45 @@ public class Lattice {
 		if(this.fvMap.containsKey(freeVariable))
 			return this.fvMap.get(freeVariable);
 		else return null;
+	}
+	
+	
+	/**
+	 * 
+	 * @param target the Lattice which content is to be compared against the current Lattice
+	 * @return true if all the values of the freeVariables are the same in the both Lattices, false otherwise.
+	 */
+	public boolean equals(Lattice target){
+		if(target==null)
+			return false;
+		else{
+			Iterator<String> iter = this.fvMap.keySet().iterator();
+			while(iter.hasNext()){
+				String key = iter.next();
+				Content fvContent = this.fvMap.get(key);
+				Content targetContent= target.getFreeVariableValue(key);
+				if(fvContent.getType().compareTo(targetContent.getType())!=0) //Two situations might imply in different Lattice. Different types
+					return false;
+				else // Or different number values
+					if((fvContent.getType().compareTo(Content.NUMBER)==0) && (fvContent.getNumber()!=targetContent.getNumber()))
+						return false;
+			}
+			return true;
+		}
+	}
+	
+	public String toString(){
+		String result="Lattice of label "+label+"={";
+		Iterator<String> iter = this.fvMap.keySet().iterator();
+		while(iter.hasNext()){
+			String key = iter.next();
+			Content content = this.fvMap.get(key);
+			result=result+" "+key+"="+content+",";
+		}
+		
+		result = result.substring(0,result.length()-1);
+		result = result+" }";
+		return result;
+		
 	}
 }

@@ -55,10 +55,15 @@ public class MainSootProject2 {
 				new BodyTransformer(){
 			protected void internalTransform(Body body, String phase, Map options) {				
 		        BlockGraph blockGraph = new ExceptionalBlockGraph(body);
-		        Analysis analysis= new Analysis(blockGraph, body, Analysis.MAY);
-		        if(analysis.hasFreeVariables()){
-		        	analysis.run();
-		        	analysis.printResult();
+		        Analysis analysis1= new Analysis(blockGraph, body, Analysis.MUST);
+		        if(analysis1.hasFreeVariables()){
+		        	analysis1.run();
+		        	analysis1.printResult();
+		        }
+		        Analysis analysis2= new Analysis(blockGraph, body, Analysis.MAY);
+		        if(analysis2.hasFreeVariables()){
+		        	analysis2.run();
+		        	analysis2.printResult();
 		        }
 		}}));
 		Options.v().set_verbose(false);

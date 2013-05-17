@@ -18,6 +18,17 @@ public class ConstraintGraphFactory {
 
 	
 	public ConstraintGraph buildGraph(){
+		
+		//Initialize allocation sites as roots
+		
+		//Obtain the assignment from one instance to the other
+		
+		//Obtain the method invocation
+		
+		//Obtain the instance returned by the method
+		
+		//Obtain the mapping between arguments and the variables inside method.
+		
 		return null;
 	}
 	

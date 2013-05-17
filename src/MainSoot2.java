@@ -33,12 +33,12 @@ public class MainSoot2 {
 
 	public static void main(String[] args){
 		args = new String[1];
-		args[0] = "TargetCode2";
+		args[0] = "target.TargetCode3";
 		
 		try{
 			System.out.println("----------------------------------------");
-			System.out.println("Content of TargetCode2.java :");
-			File file = new File("TargetCode2.java");
+			System.out.println("Content of TargetCode3.java :");
+			File file = new File("TargetCode3.java");
 			FileInputStream fis = new FileInputStream(file);
 			int oneByte;
 			while ((oneByte = fis.read()) != -1) {
@@ -55,16 +55,17 @@ public class MainSoot2 {
 				new BodyTransformer(){
 			protected void internalTransform(Body body, String phase, Map options) {
 		        BlockGraph blockGraph = new ExceptionalBlockGraph(body);
+		       // System.out.println("Blocks: " + blockGraph);
 		        Analysis analysis1= new Analysis(blockGraph, body, Analysis.MUST);
-		        if(analysis1.hasFreeVariables()){
-		        	analysis1.run();
-		        	analysis1.printResult();
-		        }
-		        Analysis analysis2= new Analysis(blockGraph, body, Analysis.MAY);
-		        if(analysis2.hasFreeVariables()){
-		        	analysis2.run();
-		        	analysis2.printResult();
-		        }
+		       // if(analysis1.hasFreeVariables()){
+		        	//analysis1.run();
+		        	//analysis1.printResult();
+		        //}
+		      //  Analysis analysis2= new Analysis(blockGraph, body, Analysis.MAY);
+		      //  if(analysis2.hasFreeVariables()){
+		        	//analysis2.run();
+		        	//analysis2.printResult();
+		       // }
 		}}));
 		Options.v().set_verbose(false);
 		PhaseOptions.v().setPhaseOption("jap.npc", "on");

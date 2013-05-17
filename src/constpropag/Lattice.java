@@ -26,7 +26,12 @@ public class Lattice {
 	
 	public Lattice(Unit unit, HashMap<String,Content>freeVariables){
 		List<Tag> list = unit.getTags();
-		this.label = ((CodeAttribute) list.get(0)).getName();
+		Object object = list.get(0);
+		if(object instanceof CodeAttribute){
+			this.label = ((CodeAttribute)object).getName();
+		}
+		else 
+			this.label= "null";
 		this.fvMap=freeVariables;
 		this.unit = unit;
 	}

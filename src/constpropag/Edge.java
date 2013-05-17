@@ -30,14 +30,28 @@ public class Edge {
 
 		if(startUnit!=null){
 			list = startUnit.getTags();
-			tag = (CodeAttribute) list.get(0);
-			this.startLabel = tag.getName();
+			Object object = list.get(0);
+			tag =null;
+			if(object instanceof CodeAttribute){
+				tag = ((CodeAttribute) object);
+				this.startLabel = tag.getName();
+			}
+			else{
+				this.startLabel = "null";
+			}
 		}
 
 		if(endUnit!=null){
 			list = endUnit.getTags();
-			tag = (CodeAttribute) list.get(0);
-			this.endLabel = tag.getName();
+			Object object = list.get(0);
+			tag =null;
+			if(object instanceof CodeAttribute){
+				tag = ((CodeAttribute) object);
+				this.endLabel = tag.getName();
+			}
+			else{
+				this.endLabel = "null";
+			}
 		}
 	}
 

@@ -6,6 +6,7 @@ import soot.Body;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.ValueBox;
 import soot.jimple.JimpleBody;
 import soot.jimple.StaticInvokeExpr;
 import soot.jimple.internal.JAssignStmt;
@@ -46,7 +47,7 @@ public class Analysis {
 	 * predecession (both at block as well as at unit level*/ 
 	BlockGraph graph; //this is initialized by the constructor
 	
-	/** It is used to keep the statements of the program in a simple the format (a list 
+	/** It is used to keep the statements of the program in a simple format (a list 
 	 * of Soot Units) */
 	private Body body;
 	
@@ -93,7 +94,7 @@ public class Analysis {
 			
 			//PERFORM THE KILL OPERATION
 			Lattice exitLattice = newEntryLattice;
-			Content computedContent;
+			Content computedContent=null;
 			KillCompute killCompute = new KillCompute();
 			Unit unit = edge.startUnit;
 			if(unit instanceof soot.jimple.internal.JAssignStmt){
@@ -104,8 +105,10 @@ public class Analysis {
 					computedContent = new Content(Content.TOP);
 				}
 				else{
-					killCompute.setupKill(expression, exitLattice);
-					computedContent = killCompute.compute();
+					if(expression.indexOf("new")!=0){//Means it is not an allocation site, ignore
+						killCompute.setupKill(expression, exitLattice);
+						computedContent = killCompute.compute();
+					}
 				}
 
 				//Now with the new computed value
@@ -162,8 +165,11 @@ public class Analysis {
 	public HashMap<String,Content> initializeFreeVariablesLattice(){
 		fvList= new HashMap<String,Content>();
 		Iterator<Unit> unitIter=getUnits();
+		
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
+			if(unit instanceof soot.jimple.internal.JSpecialInvokeExpr)
+				System.out.println("new expression :"+unit);
 			if(unit instanceof soot.jimple.internal.JAssignStmt){
 				String cellType;
 				if(this.type.compareTo(Analysis.MUST)==0)
@@ -171,7 +177,7 @@ public class Analysis {
 				else
 					cellType = Content.BOTTOM;
 				fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new Content(cellType));
-				//System.out.println("Unit: "+ unit+", Oper: "+((JAssignStmt)unit).getRightOp());
+				System.out.println("Unit: "+ unit); 
 			}
 			//ELSE System.out.println("Non Assignment Statement: "+unit);
 		}
@@ -187,11 +193,16 @@ public class Analysis {
 			Unit unit = (Unit) unitIter.next();
 			Lattice lattice  = new Lattice(unit,this.fvList);
 			List<Tag> list = unit.getTags();
-			String label = ((CodeAttribute) list.get(0)).getName();
-			this.analysisMap.put(label,lattice);
-			this.analysisList.add(label);
+			Object object = list.get(0);
+			String lbl ="null";
+			if(object instanceof CodeAttribute)
+				lbl = ((CodeAttribute) object).getName();
+				
+			this.analysisMap.put(lbl,lattice);
+			this.analysisList.add(lbl);
 		}
 	}
+	
 	
 	protected Iterator<Unit> getUnits(){
 		SootMethod m = (SootMethod)body.getMethod();

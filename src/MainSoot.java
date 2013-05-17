@@ -5,11 +5,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import pointsto.PToAnalysis;
+
 import constpropag.Analysis;
 
 import soot.Body;
 import soot.BodyTransformer;
 import soot.G;
+import soot.Hierarchy;
 import soot.PackManager;
 import soot.PhaseOptions;
 import soot.PointsToAnalysis;
@@ -85,7 +88,7 @@ public class MainSoot {
 			        
 			    	  protected void internalTransform(Body body, String phaseName,
 			            Map options) {
-			    		
+			    		  PToAnalysis analysis = new PToAnalysis(body);
 			        }
 			      }));
 			      
@@ -103,11 +106,16 @@ public class MainSoot {
 		PackManager.v().runPacks();
 		
 		CallGraph cg = Scene.v().getCallGraph();
-    	//System.out.println("In internal transform "+ cg);
+		Hierarchy hier = Scene.v().getActiveHierarchy();
+		
+		
+		
+		
+    	System.out.println("In internal transform "+ hier);
        // System.out.println(Scene.v().getApplicationClasses());
 	
-        Scene.v();
-      
+        //Scene.v();
+      /*
       Iterator<MethodOrMethodContext> targets = new Targets(
     		  cg.edgesOutOf(method));
         while (targets.hasNext()) {
@@ -124,7 +132,7 @@ public class MainSoot {
         		}
         	}
         }
-		
+		*/
 	}
 
 

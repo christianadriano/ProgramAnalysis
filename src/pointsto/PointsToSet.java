@@ -1,5 +1,6 @@
 package pointsto;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -11,26 +12,44 @@ import java.util.Iterator;
  */
 public class PointsToSet {
 
-	HashSet<String> pointSet = new HashSet<String>();
-
-	public void addNode(String nodeContent) {
-		this.pointSet.add(nodeContent);
+	/** Stores the class names associated to a instance free variable */
+	HashMap<Integer, HashSet<String>> pointSetMap = new HashMap<Integer,HashSet<String>>();
+	
+	public boolean addNode(Integer key, String className) {
+		HashSet<String> set = pointSetMap.get(key);
+		if(set==null){
+			set = new HashSet<String>();
+			set.add(className);
+			this.pointSetMap.put(key,set);
+			return false;
+		}
+		else{
+			set.add(className);
+			this.pointSetMap.put(key,set);
+			return true;
+		}
 	}
 
-	public boolean hasNode(String nodeContent) {
-		return this.pointSet.contains(nodeContent);
+	public boolean hasNode(Integer key) {
+		return this.pointSetMap.keySet().contains(key);
 	}
 
 	
 	public String toString(){
-		String result="{ ";
-		Iterator<String> iter = pointSet.iterator();
+		
+		String result=new String();
+		Iterator<Integer> iter = pointSetMap.keySet().iterator();
 		while(iter.hasNext()){
-			String content = iter.next();
-			result = result + content+","; 
+			Integer key = iter.next();
+			Iterator<String> set = pointSetMap.get(key).iterator();
+			result = result+key + " = {";
+			while(set.hasNext()){
+				String className =set.next();
+				result = result + className+",";
+			}
+			result = result.substring(0, result.length()-1);
+			result = result + "}\n";
 		}
-		result = result.substring(0, result.length()-1);
-		result = result + " }";
 		return result;
 	}
 	

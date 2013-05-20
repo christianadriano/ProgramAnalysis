@@ -38,41 +38,42 @@ public class PToAnalysis {
 
 	
 	/** Initial set of all freeVariables. <Variable hashcode, which is unique>*/
-	HashSet<Integer> fvSet= new HashSet<Integer>();
+	private HashSet<Integer> fvSet= new HashSet<Integer>();
 	
 	/** Initial set of all freeVariables. <Variable hashcode, which is unique>*/
-	HashSet<Integer> callSitesSet= new HashSet<Integer>();
+	private HashMap<Integer,SootMethod> callSitesMap= new HashMap<Integer,SootMethod>();
+
+	/** Keeps track of allocation sites indexed by their hash key*/
+	public HashMap<Integer,String> allocationSiteMap = new HashMap<Integer,String>();
 	
-	/** Keeps the results for each function call statement */
-	HashMap<String,Lattice> analysisMap = new HashMap<String,Lattice>();
+	/** Keeps track of the constraint graph */
+	public ConstraintGraph constraintGraph = new ConstraintGraph();
 	
-	/** Keeps the list of labels corresponding to the statements in order of occurence so 
-	 * we can display the results in the same order they appear in the source code listing */
-	ArrayList<String> analysisList = new ArrayList<String>();
-	
-	/**Blocks are the entities in Soot that effectively keep track of succession and 
-	 * predecession (both at block as well as at unit level*/ 
-	BlockGraph graph; //this is initialized by the constructor
+	/** Keeps the results for each free variable and the possible (MAY analysis) allocation sites reaching this variable */
+	private PointsToSet pointsToSet = new PointsToSet();
 	
 	/** It is used to keep the statements of the program in a simple the format (a list 
 	 * of Soot Units) */
 	private Body body;
 	
-	public PToAnalysis(Body body) {
+	public PToAnalysis() {
 		//build constraint graph
-		this.body = body;
+		
 		ConstraintGraphFactory factory = new ConstraintGraphFactory();
 		ConstraintGraph graph = factory.buildGraph();
-		this.initializeFreeVariablesLattice();
+		//this.investigateOutputs();
+		//this.initializeFreeVariablesLattice();
 	}
 	
-	
+	public void setBody(Body body){
+		this.body = body;
+	}
 	
 	/** Method iterates through the body of a program to find the free variables, 
 	 * which are the variables at the left hand side of the statements.
 	 * @return array of free variable names as primitive string type.
 	 */
-	public void initializeFreeVariablesLattice(){
+	public void initializeFreeVariable_CallSites(){
 		fvSet= new HashSet<Integer>();
 		Iterator<Unit> unitIter=getUnits();
 		while(unitIter.hasNext()){
@@ -84,25 +85,29 @@ public class PToAnalysis {
 				for(ValueBox use : uses) {
 					Value useValue = use.getValue();
 					System.out.println("Use value: " + useValue + ", hashCode="+use.hashCode()+" ,type: " + useValue.getClass());
+					List<ValueBox> defs = unit.getDefBoxes();
 					//It is an object instantiation -------------------------------------------
 					if(useValue instanceof soot.jimple.internal.JNewExpr){
-						List<ValueBox> defs = unit.getDefBoxes();
+					
 						for(ValueBox def : defs) {
 							Value defValue = def.getValue();
 							System.out.println("Def value: " + defValue + ", hashCode="+def.hashCode()+" ,type: " + defValue.getClass());
-							//Node node = new Node(use.hashCode());
-							//PointsToSet set = new PointsToSet(defValue.hashCode());
-							//Edge edge = new Edge(use.hashCode(),set));
-							fvSet.add(new Integer(use.hashCode())); //FreeVariable must have a unique entry in the map
-							//edgeList.add(edge,edge);
+							System.out.println("put:"+use.hashCode()+" className:"+useValue.toString());
+							this.allocationSiteMap.put(new Integer(use.hashCode()), useValue.toString());
 						}
 					}
 					
 					//It is a method invocation ------------------------------------------------
 					else if (useValue instanceof soot.jimple.internal.JVirtualInvokeExpr){
 						//Obtain variable and method name
-						System.out.println("method: "+((soot.jimple.internal.JVirtualInvokeExpr) useValue).getMethod());
+						Integer key = new Integer(((soot.jimple.internal.JVirtualInvokeExpr) useValue).getBaseBox().hashCode());
+						String className = this.allocationSiteMap.get(key);
+						SootMethod method = ((soot.jimple.internal.JVirtualInvokeExpr) useValue).getMethod();
+						this.callSitesMap.put(key,method);
+						
 						System.out.println("baseBox: "+((soot.jimple.internal.JVirtualInvokeExpr) useValue).getBaseBox());  //Basebox is the object reference on which the method is being called.
+						System.out.println("hashCode instance: "+key+ "className: "+className);  //Basebox is the object reference on which the method is being called.
+						System.out.println("method: "+method);
 					}
 				}
 			}
@@ -117,8 +122,36 @@ public class PToAnalysis {
 	
 	
 	
-	protected Iterator<Unit> getUnits(){
+	
+	/** Perform the analysis and print the output in the console*/
+	public void run(){
+		this.initializeFreeVariable_CallSites();
+	}
+	
+
+
+	
+	/** Traverses the graph from the root (Allocation Site) to the leaves. 
+	 * At each node proceeds an Union operation
+	 * @param graph
+	 */
+	public void performReachabilityAnalysis(Integer key, String className){
+		System.out.println("iter key="+key+" className: "+className);
+		this.pointsToSet.addNode(key, className); //add the class name to the points to set of key	
+		if(this.constraintGraph.nodesMap.containsKey(key)){
+			Iterator<Integer> iterSucc = this.constraintGraph.nodesMap.get(key).iterator();
+			//Propagates the className for all successor nodes.
+			while(iterSucc.hasNext()){
+				Integer succKey = iterSucc.next();
+				performReachabilityAnalysis(succKey,className);
+			}
+		}
+	}
+	
+	
+	public Iterator<Unit> getUnits(){
 		SootMethod m = (SootMethod)body.getMethod();
+		
 		if(m.isConcrete()){
 			JimpleBody jbody = (JimpleBody) m.retrieveActiveBody();
 			Iterator<Unit> unitIter = jbody.getUnits().iterator();
@@ -126,5 +159,10 @@ public class PToAnalysis {
 		}
 		else
 			return null;
+	}
+	
+	public void printResults(){
+		System.out.println("Points to Set ------------- ");
+		System.out.println(this.pointsToSet);
 	}
 }

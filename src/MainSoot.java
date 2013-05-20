@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import pointsto.MyTransformer;
 import pointsto.PToAnalysis;
 
 import constpropag.Analysis;
@@ -13,6 +14,7 @@ import soot.Body;
 import soot.BodyTransformer;
 import soot.G;
 import soot.Hierarchy;
+import soot.Pack;
 import soot.PackManager;
 import soot.PhaseOptions;
 import soot.PointsToAnalysis;
@@ -83,14 +85,11 @@ public class MainSoot {
 		
 		//soot.Main.main(args);
 		
+		MyTransformer myTransformer =  new MyTransformer();
+	    	  
+		
 		PackManager.v().getPack("jap").add(
-			      new Transform("jap.myTransform", new BodyTransformer() {
-			        
-			    	  protected void internalTransform(Body body, String phaseName,
-			            Map options) {
-			    		  PToAnalysis analysis = new PToAnalysis(body);
-			        }
-			      }));
+			      new Transform("jap.myTransform",myTransformer));
 			      
 		Options.v().parse(args);
 		Options.v().set_verbose(false);
@@ -104,8 +103,10 @@ public class MainSoot {
 		Scene.v().setEntryPoints(entryPoints);
 		
 		PackManager.v().runPacks();
+		//Pack pack = PackManager.v().getPack("jap.myTransform");
+		myTransformer.printOutPut();
 		
-		CallGraph cg = Scene.v().getCallGraph();
+		//CallGraph cg = Scene.v().getCallGraph();
 		Hierarchy hier = Scene.v().getActiveHierarchy();
 		
 		

@@ -35,6 +35,22 @@ public class PointsToSet {
 	}
 
 	
+	public String getStringSet(Integer key){
+		if(this.hasNode(key)){
+			String result="";
+			Iterator<String> set = pointSetMap.get(key).iterator();
+			result = result+"= {";
+			while(set.hasNext()){
+				String className =set.next();
+				result = result + className+",";
+			}
+			result = result.substring(0, result.length()-1);
+			result = result + "}";
+			return result;
+		}
+		else return "";
+	}
+	
 	public String toString(){
 		
 		String result=new String();

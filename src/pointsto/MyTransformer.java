@@ -19,7 +19,7 @@ import soot.jimple.internal.JVirtualInvokeExpr;
 
 public class MyTransformer extends BodyTransformer {
 	
-	PToAnalysis analysis = new PToAnalysis();
+	PToAnalysis analysis= new PToAnalysis();
 	Body body;
 	
 	protected void internalTransform(Body body, String phaseName, Map options) {
@@ -33,6 +33,10 @@ public class MyTransformer extends BodyTransformer {
 		analysis.printResults();
 	  }
 
+	  public void runReachability(){
+		  analysis.runReachability();
+	  }
+	  
 	  public void testInternalTransform(){
 		  Iterator<Unit> iter = this.body.getUnits().iterator();
 			while(iter.hasNext()){

@@ -48,50 +48,52 @@ import constpropag.Lattice;
  */
 public class PToAnalysis {
 
-	
+
+
 	/** Initial set of all freeVariables. <Variable hashcode, which is unique>*/
-	private HashSet<Integer> fvSet= new HashSet<Integer>();
-	
-	/** Initial set of all freeVariables. <Variable hashcode, which is unique>*/
-	private HashMap<Integer,SootMethod> callSitesMap= new HashMap<Integer,SootMethod>();
+	private HashMap<Integer,InvokeExpr> callSitesMap= new HashMap<Integer,InvokeExpr>();
 
 	/** Keeps track of allocation sites indexed by their hash key*/
 	public HashMap<Integer,String> allocationSiteMap = new HashMap<Integer,String>();
-	
+
 	/** Keeps track of the constraint graph */
 	public ConstraintGraph constraintGraph = new ConstraintGraph();
-	
+
 	/** Keeps the results for each free variable and the possible (MAY analysis) allocation sites reaching this variable */
 	private PointsToSet pointsToSet = new PointsToSet();
-	
+
 	/** It is used to keep the statements of the program in a simple the format (a list 
 	 * of Soot Units) */
 	private Body body;
-	
+
 	public PToAnalysis() {
 		//build constraint graph
-		
-		ConstraintGraphFactory factory = new ConstraintGraphFactory();
-		ConstraintGraph graph = factory.buildGraph();
+		//ConstraintGraphFactory factory = new ConstraintGraphFactory();
+		//ConstraintGraph graph = factory.buildGraph();
 	}
-	
+
 	public void setBody(Body body){
 		this.body = body;
 	}
-	
+
 	/** Perform the analysis and print the output in the console*/
 	public void run(){
-		//this.initializeInstanceVariables_CallSites();
-		buildConstraintEdges();
-//		this.investigateReturnStmt();
+		
+		this.initializeInstanceVariables_CallSites();
+		this.buildConstraintEdges();
+		System.out.println();
+		System.out.println("allocationSiteMap.size: "+allocationSiteMap.size());
+		System.out.println("constraintMap.size: "+this.constraintGraph.nodesMap.size());
+
 	}
-	
+
 	/** Method iterates through the body of a program to find the free variables, 
 	 * which are the variables at the left hand side of the statements.
 	 * @return array of free variable names as primitive string type.
 	 */
 	public void initializeInstanceVariables_CallSites(){
-		fvSet= new HashSet<Integer>();
+		System.out.println();
+		System.out.println("Initializing Variables and Call Sites ------------------------------------------");
 		Iterator<Unit> unitIter=getUnits();
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
@@ -101,190 +103,220 @@ public class PToAnalysis {
 			if(unit!=null){
 				List<ValueBox> uses = unit.getUseBoxes();
 				//System.out.println("uses: "+uses);
-				for(ValueBox use : uses) {
-					Value useValue = use.getValue();
-					System.out.println("Use value: " + useValue + ", hashCode="+use.hashCode()+" ,type: " + useValue.getClass());
-					List<ValueBox> defs = unit.getDefBoxes();
-					//It is an object instantiation -------------------------------------------
-					if(useValue instanceof soot.jimple.internal.JNewExpr){
+
+				if(unit instanceof soot.jimple.internal.JIdentityStmt){
+					Value useValue = ((soot.jimple.internal.JIdentityStmt)unit).getRightOp();
+					Value defValue = ((soot.jimple.internal.JIdentityStmt)unit).getLeftOp();
+					int colonPosition = useValue.toString().lastIndexOf(":");
+					String className = useValue.toString().substring(colonPosition+1);
 					
-						for(ValueBox def : defs) {
-							Value defValue = def.getValue();
-							System.out.println("Def value: " + defValue + ", hashCode="+def.hashCode()+" ,type: " + defValue.getClass());
-							String className = useValue.toString().replace("return", "");
-							System.out.println("put className:"+className+ " key:"+use.hashCode());
-							this.allocationSiteMap.put(new Integer(use.hashCode()), useValue.toString());
+					if(!(className.contains("java")) && !(className.contains("soot"))&&!(className.contains("pointsto"))){
+						this.allocationSiteMap.put(new Integer(defValue.hashCode()), className);
+						System.out.println("put IDENTITY defValue: "+ defValue+ ", className:"+className);
+					}
+				}
+				else
+					if(unit instanceof soot.jimple.internal.JAssignStmt){
+						List<ValueBox> defs = unit.getDefBoxes();
+						Value defValue = defs.get(0).getValue(); //Have only one def
+						System.out.println("defValue: "+ defValue+ ", Class"+defValue.getClass().getName());
+
+						//----------------------  So it is an assignment to an instance variable. -------------
+						if((defValue instanceof soot.jimple.internal.JimpleLocal)){ 
+							//------------------ So it is a simple assignment or a new Instance from one variable to another -------------------
+							if(uses.size()==1){
+								Value useValue = uses.get(0).getValue();
+								if((useValue instanceof soot.jimple.internal.JNewExpr)){
+									String className = useValue.toString().replaceAll("new", "");
+
+									if(!(className.contains("java")) && !(className.contains("soot"))){
+										this.allocationSiteMap.put(new Integer(useValue.hashCode()), className);
+										System.out.println("put INSTANCE key:"+useValue.hashCode()+", className:"+className);
+									}
+								}
+							}
+							else//----------------------  It is a method invocation with an Assignment --------------------------------
+								if((uses.size()>1)&&
+										((JAssignStmt) unit).getRightOp() instanceof JVirtualInvokeExpr){
+									InvokeExpr stmt = ((JAssignStmt) unit).getInvokeExpr();
+									SootMethod method = stmt.getMethod();
+									Integer key = new Integer(method.hashCode());
+									if(!(method.getSubSignature().contains("java")) && !(method.getSubSignature().contains("soot"))&& !(method.getSubSignature().contains("pointsto"))){
+											this.callSitesMap.put(key,stmt);
+											System.out.println("put METHOD key:"+ key+", method:"+method.getSubSignature());
+									}
+								}
 						}
 					}
-					
-					//It is a method invocation ------------------------------------------------
-					else if (useValue instanceof soot.jimple.internal.JVirtualInvokeExpr){
-						//Obtain variable and method name
-						Integer key = new Integer(((soot.jimple.internal.JVirtualInvokeExpr) useValue).getBaseBox().hashCode());
-						String className = this.allocationSiteMap.get(key);
-						SootMethod method = ((soot.jimple.internal.JVirtualInvokeExpr) useValue).getMethod();
-						
-						
-						this.callSitesMap.put(key,method);
-						System.out.println("put method:"+method+" key:"+key);
-						//System.out.println("baseBox: "+((soot.jimple.internal.JVirtualInvokeExpr) useValue).getBaseBox());  //Basebox is the object reference on which the method is being called.
-						//System.out.println("hashCode instance: "+key+ "className: "+className);  //Basebox is the object reference on which the method is being called.
-						//System.out.println("method: ---------------"+method);
-						
-						
-					}
-				}
-			}
-			
-			//if(unit instanceof soot.jimple.internal.JAssignStmt){
-			//	fvList.put(((JAssignStmt)unit).leftBox.getValue().toString(),new PointsToSet());
-			//	System.out.println("Unit: "+ unit); 
-			//}
-			//ELSE System.out.println("Non Assignment Statement: "+unit);
-		}
-	}
-	
-	
-	public void investigateReturnStmt(){
-		PatchingChain<Unit> units = this.body.getUnits();
-		Iterator stmtIt = units.snapshotIterator();
-
-		while(stmtIt.hasNext()){
-			Stmt stmt = (Stmt)stmtIt.next();
-			System.out.println("Stmt:" + stmt);
-			System.out.println("Stmt class: ------------ "+ stmt.getClass().getName());
-
-			//if((stmt instanceof soot.jimple.internal.JReturnStmt) || (unit instanceof soot.jimple.internal.JRetStmt)|| (unit instanceof soot.jimple.internal.JReturnVoidStmt)){
-			
-			if (stmt instanceof JReturnStmt){
-				List<ValueBox> values = ((JReturnStmt)stmt).getOp().getUseBoxes();
-				Value value = values.get(0).getValue();
-				System.out.println("JReturnStmt, value="+ value);
-			}
-			else{ 
-				if(stmt instanceof JReturnVoidStmt) {
-				
-				System.out.println("JReturnVoidStmt, stmt="+ stmt);
-				}
+					else//It is simply a method invocation, without assignments
+						if((unit instanceof JInvokeStmt)){
+							System.out.println("JVirtualInvokeStmt---------------------");
+							InvokeExpr stmt = ((JInvokeStmt) unit).getInvokeExpr();
+							SootMethod method = stmt.getMethod();
+							Integer key = new Integer(method.hashCode());
+							if(!(method.getSubSignature().contains("java")) && !(method.getSubSignature().contains("soot"))&& !(method.getSubSignature().contains("pointsto"))){
+								this.callSitesMap.put(key,stmt);
+								System.out.println("put METHOD key:"+ key+", method:"+method.getSubSignature());
+							}
+						}
 			}
 		}
 	}
-	
-	
+
+
 	/** Traverse the units produced by Soot and for each instance variable assignment, create a constraint edge to be
 	 * stored at the ConstraintGraph
 	 */
 	public void buildConstraintEdges(){
 		Iterator<Unit> unitIter=getUnits();
+		System.out.println();
+		System.out.println("-------------------------------------------------------------------");
+		System.out.println("Building Constraint Graph------------------------------------------");
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
 
 			if(unit!=null){
-				System.out.println("--------------------------");
+				System.out.println("------------------------------------------");
 				System.out.println("unit: "+ unit);
 				System.out.println("unit class: "+ unit.getClass().getName());
 				List<ValueBox> uses = unit.getUseBoxes();
 
-				if(unit instanceof soot.jimple.internal.JAssignStmt){
-					List<ValueBox> defs = unit.getDefBoxes();
-					Value defValue = defs.get(0).getValue(); //Have only one def
-					System.out.println("defValue: "+ defValue+ ", Class"+defValue.getClass().getName());
+				if(unit instanceof soot.jimple.internal.JIdentityStmt){
+					Value useValue = ((soot.jimple.internal.JIdentityStmt)unit).getRightOp();
+					Value defValue = ((soot.jimple.internal.JIdentityStmt)unit).getLeftOp();
+					Integer source = new Integer(useValue.hashCode());
+					Integer successor = new Integer(defValue.hashCode());
+					System.out.println("put IDENTITY source: "+ source+ ", successor:"+successor);
+					this.constraintGraph.addSuccessor(source, successor);
+				}
+				else
+					if(unit instanceof soot.jimple.internal.JAssignStmt){
+						List<ValueBox> defs = unit.getDefBoxes();
+						Value defValue = defs.get(0).getValue(); //Have only one def
+						System.out.println("defValue: "+ defValue+  ", key: "+defValue.hashCode()+", Class"+defValue.getClass().getName());
 
-					//----------------------  So it is an assignment to an instance variable. -------------
-					if((defValue instanceof soot.jimple.internal.JimpleLocal)){ 
+						//----------------------  So it is an assignment to an instance variable. -------------
+						if((defValue instanceof soot.jimple.internal.JimpleLocal)){ 
 
-						//------------------ So it is a simple assignment or a new Instance from one variable to another -------------------
-						if(uses.size()==1){
-							Value useValue = uses.get(0).getValue();
-							if((useValue instanceof soot.jimple.internal.JNewExpr) || (useValue instanceof soot.jimple.internal.JimpleLocal)){
-								Integer successor = new Integer(defValue.hashCode());
-								Integer source = new Integer(useValue.hashCode());
-								this.constraintGraph.addSuccessor(source, successor);
-								System.out.println("put source:"+source+"successor: "+ successor);
+							//------------------ So it is a simple assignment or a new Instance from one variable to another -------------------
+							if(uses.size()==1){
+								Value useValue = uses.get(0).getValue();
+								if((useValue instanceof soot.jimple.internal.JNewExpr) || (useValue instanceof soot.jimple.internal.JimpleLocal)){
+									Integer successor = new Integer(defValue.hashCode());
+									Integer source = new Integer(useValue.hashCode());
+									this.constraintGraph.addSuccessor(source, successor);
+									System.out.println("put source: "+source+", successor: "+ successor);
+								}
+								else
+									System.out.println("Assignment situation not predicted:"+useValue.getClass().getName() +" Ignoring....");
 							}
 							else
-								System.out.println("Assignment situation not predicted:"+useValue.getClass().getName() +" Ignoring....");
+								//----------------------  It is a method invocation, so there is  return to be treated. -------------
+								if((uses.size()>1)&&
+										((JAssignStmt) unit).getRightOp() instanceof JVirtualInvokeExpr){
+									System.out.println("Resolving return statement: "+((JAssignStmt) unit).getRightOp());
+									System.out.println("DefValue = "+defValue);
+
+									Integer successor = new Integer(defValue.hashCode()); //The def Value of the caller will be successor
+
+									//Now we have to obtain the name to the internal variable returned by the method.
+									Value value = ((JAssignStmt) unit).getRightOp();
+									SootMethod method = ((soot.jimple.internal.JVirtualInvokeExpr) value).getMethod();
+									if(method.hasActiveBody()){
+										Integer source = this.obtainHashCodeReturnFromMethod(method);
+										System.out.println("put source: "+source+", successor: "+ successor);
+										this.constraintGraph.addSuccessor(source, successor);
+
+										//Now we have to link the parameters and the internal variables of the method.
+										InvokeExpr stmt = ((JAssignStmt) unit).getInvokeExpr();	
+										linkParametersCallerAndCallee(stmt,method);
+									}
+								}
 						}
-						else
-							//----------------------  It is a method invocation, so there is  return to be treated. -------------
-							if((uses.size()>1)&&
-									((JAssignStmt) unit).getRightOp() instanceof JVirtualInvokeExpr){
-								System.out.println("Return statement not resolved"+((JAssignStmt) unit).getRightOp());
-								Integer successor = new Integer(defValue.hashCode()); //The def Value of the caller will be successor
-								//Now we have to obtain the name to the internal variable returned by the method.
-								Value value = ((JAssignStmt) unit).getRightOp();
-								SootMethod method = ((soot.jimple.internal.JVirtualInvokeExpr) value).getMethod();
-								Integer source = this.obtainHashCodeReturnFromMethod(method);
-								this.constraintGraph.addSuccessor(source, successor);
-								InvokeExpr stmt = ((JAssignStmt) unit).getInvokeExpr();
-								
-								//Now we have to link the parameters and the internal variables of the method.
-								
+					}
+
+					else
+						if((unit instanceof JInvokeStmt)){
+							System.out.println("JVirtualInvokeStmt---------------------");
+							InvokeExpr stmt = ((JInvokeStmt) unit).getInvokeExpr();
+							SootMethod method = stmt.getMethod();
+							if(method.hasActiveBody())
 								linkParametersCallerAndCallee(stmt,method);
-							}
-					}
-				}
-				
-				else
-					if((unit instanceof JInvokeStmt)){
-						System.out.println("JVirtualInvokeStmt---------------------");
-						InvokeExpr stmt = ((JInvokeStmt) unit).getInvokeExpr();
-						SootMethod method = stmt.getMethod();
-						linkParametersCallerAndCallee(stmt,method);
-					}
-				}
+						}
 			}
-		
+		}
+
 	}
-	
-	
+
+
 	protected void linkParametersCallerAndCallee(InvokeExpr stmt, SootMethod method){
 		List<ValueBox> invocationList = stmt.getUseBoxes();
 		int j=1;
 		int i=0;
 		while(j<invocationList.size() && i<method.getParameterCount()){
 			Value value= ((ValueBox)invocationList.get(j)).getValue();
-			System.out.println("------ Local in invokeStmt: "+ value+" class: "+value.getClass().getName());
-			j++;
-			Local local = method.getActiveBody().getParameterLocal(i);
-			System.out.println("------ Local in method="+local.getName()+" class:"+local.getClass().getName());
-			i++;
-			
-			//Only create edge if the parameter is a local instance (i.e., ignore constants)
-			if(value instanceof JimpleLocal){
+			if((value instanceof JimpleLocal)&&(method.hasActiveBody())){//Only create edge if the parameter is a local instance (i.e., ignore constants)
+				System.out.println("------ Local in invokeStmt: "+ value+" class: "+value.getClass().getName());
+
+				Local local = method.getActiveBody().getParameterLocal(i);
+				System.out.println("------ Local in method="+local.getName()+" class:"+local.getClass().getName());
+
 				Integer source = new Integer(value.hashCode());
 				Integer successor = new Integer(local.hashCode());
-			
+				System.out.println("put source: "+source+", successor: "+ successor);
 				this.constraintGraph.addSuccessor(source, successor);
 			}
+			i++;
+			j++;
 		}
-		
 	}
-	
+
 	protected Integer obtainHashCodeReturnFromMethod(SootMethod method){
 		Integer source=null;
-		Iterator<Unit> iterMB = method.getActiveBody().getUnits().iterator();
-		while(iterMB.hasNext()){
-			Unit unitMB= iterMB.next();
-			if(unitMB instanceof JReturnStmt){
-				Value value = ((JReturnStmt)unitMB).getOp();
-				System.out.println("------ return value: "+ value.hashCode()+" class: "+unitMB.getClass().getName());
-				source = new Integer(value.hashCode());
-				return source;
+		if(method.hasActiveBody()){
+			Iterator<Unit> iterMB = method.getActiveBody().getUnits().iterator();
+			while(iterMB.hasNext()){
+				Unit unitMB= iterMB.next();
+				if(unitMB instanceof JReturnStmt){
+					Value value = ((JReturnStmt)unitMB).getOp();
+					System.out.println("------ return value: "+ value.hashCode()+" value: "+unitMB);
+					source = new Integer(value.hashCode());
+					return source;
+				}
 			}
 		}
 		return source;
 	}
-	
 
 
-	
+	/** Run the reachability analysis by traversing the constraint graph and making unions at 
+	 * every path intersection (paths coming from different allocation sites)
+	 * The result of the processing is ready in the datastructure pointsToSet of this class.
+	 */
+	public void runReachability(){
+
+		Iterator<Integer> iterSites = this.allocationSiteMap.keySet().iterator();
+		while(iterSites.hasNext()){
+			Integer key = iterSites.next();
+			String className = this.allocationSiteMap.get(key);
+			//System.out.println("iter key="+key+", className:"+ className);
+			this.pointsToSet.addNode(key, className);
+			if(this.constraintGraph.nodesMap.get(key)!=null){
+				Iterator<Integer> iterFirstInstance = this.constraintGraph.nodesMap.get(key).iterator();
+				Integer succKey = iterFirstInstance.next();
+				this.performReachabilityAnalysis(succKey, className);
+			}
+		}
+	}
+
+
+
 	/** Traverses the graph from the root (Allocation Site) to the leaves. 
 	 * At each node proceeds an Union operation
 	 * @param graph
 	 */
 	public void performReachabilityAnalysis(Integer key, String className){
-		System.out.println("iter key="+key+" className: "+className);
+		//System.out.println("iter key="+key+" className: "+className);
 		this.pointsToSet.addNode(key, className); //add the class name to the points to set of key	
 		if(this.constraintGraph.nodesMap.containsKey(key)){
 			Iterator<Integer> iterSucc = this.constraintGraph.nodesMap.get(key).iterator();
@@ -295,11 +327,11 @@ public class PToAnalysis {
 			}
 		}
 	}
-	
-	
+
+
 	public Iterator<Unit> getUnits(){
 		SootMethod m = (SootMethod)body.getMethod();
-		
+
 		if(m.isConcrete()){
 			JimpleBody jbody = (JimpleBody) m.retrieveActiveBody();
 			Iterator<Unit> unitIter = jbody.getUnits().iterator();
@@ -308,9 +340,27 @@ public class PToAnalysis {
 		else
 			return null;
 	}
-	
+
 	public void printResults(){
 		System.out.println("Points to Set ------------- ");
 		System.out.println(this.pointsToSet);
+		System.out.println();
+		System.out.println("-----------------------------------------------------------------------------");
+		System.out.println("Possible classes for methods calls from (variable,hashcode)------------------");
+		Iterator<Integer> mKeys = this.callSitesMap.keySet().iterator();
+		while(mKeys.hasNext()){
+			InvokeExpr expr = this.callSitesMap.get(mKeys.next());
+			List<ValueBox> invocationList = expr.getUseBoxes();
+			if((invocationList!=null)&&(invocationList.size()>0)){
+				Value value= ((ValueBox)invocationList.get(0)).getValue();
+				Integer objectKey = new Integer(value.hashCode());
+				if(this.pointsToSet.hasNode(objectKey)){
+					String classes = this.pointsToSet.getStringSet(objectKey);
+					System.out.println("Variable ("+ value+","+objectKey+") CALLS "+expr.getMethod().getSubSignature()+" ON "+ classes);
+				}
+			}
+		}
 	}
 }
+
+

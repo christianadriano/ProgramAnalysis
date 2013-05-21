@@ -45,54 +45,34 @@ public class MainSoot {
 	public MainSoot() {}
 
 	public static void main(String[] args){
-		//args = new String[1];
-		//args[0] = "target.TargetCode3";
-		//args[1] = "--w";
-		
-		try{
+
+		//try{
 			System.out.println("----------------------------------------");
-			System.out.println("Content of TargetCode3.java :");
-			File file = new File("target.TargetCode3.java");
+			System.out.println("For content of TargetCode3.java, see the file in the current folder");
+			/*File file = new File("TargetCode3.java");
 			FileInputStream fis = new FileInputStream(file);
 			int oneByte;
 			while ((oneByte = fis.read()) != -1) {
 				System.out.write(oneByte);
 			}
 			System.out.println("----------------------------------------");
+			
 			}
 			catch(Exception ex){
 				System.out.println("! Please to see the Java File content, put the file TargetCode.java in the same folder of the JarFile");
 				System.out.println();
 			}
-		
-		/*PackManager.v().getPack("cg").add(new Transform("cg.myPTAnalysis", 
-				new SceneTransformer(){
-			
-			protected void internalTransform(String phaseName, Map opts){
-				System.out.println("Entered internalTransform");
-				CHAOptions options = new CHAOptions( opts );
-				CallGraphBuilder cg = new CallGraphBuilder();
-				cg.build();
-				System.out.println("Number of reachable methods: " +Scene.v().getReachableMethods().size() );
-				if( options.verbose() ) {
-					//G.v().out.println( "Number of reachable methods: " +Scene.v().getReachableMethods().size() );
-					
-				}
-			}}));
 		*/
-		//Options.v().set_verbose(false);
-		//PhaseOptions.v().setPhaseOption("cg", "on");
 		
-		//soot.Main.main(args);
-		
+		System.out.println(" PLEASE WAIT, PROCESSING ");
 		MyTransformer myTransformer =  new MyTransformer(); 
 		PackManager.v().getPack("jtp").add(
 			      new Transform("jtp.myTransform",myTransformer));
 			      
 		Options.v().parse(args);
 		Options.v().set_verbose(false);
-		Options.v().set_whole_program(true); 
-		SootClass c = Scene.v().forceResolve("target.TargetCode3", SootClass.HIERARCHY);
+		Options.v().set_whole_program(false); 
+		SootClass c = Scene.v().forceResolve("TargetCode3", SootClass.HIERARCHY);
 		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
 		SootMethod method = c.getMethodByName("main");
@@ -102,56 +82,12 @@ public class MainSoot {
 		
 		PackManager.v().runPacks();
 
-		myTransformer.printOutPut();		
+		
+		myTransformer.runReachability();
+		myTransformer.printOutPut();
 		//CallGraph cg = Scene.v().getCallGraph();
-		Hierarchy hier = Scene.v().getActiveHierarchy();
-		
-		
-		
-		
-    	System.out.println("In internal transform "+ hier);
-       // System.out.println(Scene.v().getApplicationClasses());
-	
-        //Scene.v();
-      /*
-      Iterator<MethodOrMethodContext> targets = new Targets(
-    		  cg.edgesOutOf(method));
-        while (targets.hasNext()) {
-        	SootMethod tgt = (SootMethod) targets.next();
-        	System.out.println(method + " may call " + tgt);
-        	Iterator<MethodOrMethodContext> subTargets = new Targets(cg.edgesOutOf(tgt));
-        	//System.out.println("subTargets size: "+subTargets.toString());
-        	boolean once=true;
-        	if(tgt!=null){
-        		while (subTargets.hasNext() && once) {
-        			SootMethod subTgt = (SootMethod) subTargets.next();
-        			System.out.println(tgt+ " may calll " + subTgt);
-        			//once=false;
-        		}
-        	}
-        }
-		*/
+		//Hierarchy hier = Scene.v().getActiveHierarchy();
 	}
-
-
-
-
-/** Builds an invoke graph using Class Hierarchy Analysis. 
-class CHATransformer extends SceneTransformer{
-
-	public CHATransformer( Singletons.Global g ) {}
-
-	public static CHATransformer v() { return G.v().soot_jimple_toolkits_callgraph_CHATransformer(); }
-
-	protected void internalTransform(String phaseName, Map opts){
-		CHAOptions options = new CHAOptions( opts );
-		CallGraphBuilder cg = new CallGraphBuilder( (PointsToAnalysis) TargetCode3.main() );
-		cg.build();
-		if( options.verbose() ) {
-			G.v().out.println( "Number of reachable methods: " +Scene.v().getReachableMethods().size() );
-		}
-	}
-	*/
 	
 }
 	

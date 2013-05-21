@@ -8,7 +8,6 @@ public class IncrementComputer extends Computer {
 	}
 
 	public int compute(int x, int y){
-		System.out.println("I am in Increment");
 		return x;
 	}
 	

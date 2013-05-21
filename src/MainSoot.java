@@ -85,16 +85,14 @@ public class MainSoot {
 		
 		//soot.Main.main(args);
 		
-		MyTransformer myTransformer =  new MyTransformer();
-	    	  
-		
-		PackManager.v().getPack("jap").add(
-			      new Transform("jap.myTransform",myTransformer));
+		MyTransformer myTransformer =  new MyTransformer(); 
+		PackManager.v().getPack("jtp").add(
+			      new Transform("jtp.myTransform",myTransformer));
 			      
 		Options.v().parse(args);
 		Options.v().set_verbose(false);
 		Options.v().set_whole_program(true); 
-		SootClass c = Scene.v().forceResolve("target.TargetCode3", SootClass.BODIES);
+		SootClass c = Scene.v().forceResolve("target.TargetCode3", SootClass.HIERARCHY);
 		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
 		SootMethod method = c.getMethodByName("main");
@@ -103,9 +101,8 @@ public class MainSoot {
 		Scene.v().setEntryPoints(entryPoints);
 		
 		PackManager.v().runPacks();
-		//Pack pack = PackManager.v().getPack("jap.myTransform");
-		myTransformer.printOutPut();
-		
+
+		myTransformer.printOutPut();		
 		//CallGraph cg = Scene.v().getCallGraph();
 		Hierarchy hier = Scene.v().getActiveHierarchy();
 		

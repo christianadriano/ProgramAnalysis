@@ -5,9 +5,15 @@ public class Computer{
 	public Computer(int init){
 		this.init = init;
 	}
-	public Computer computeThis(int x, int y){
-		System.out.println("I am in Computer "+init);
-		return this;
-
+	
+	public Computer convert(Computer c){
+		int y =  c.init * this.init;
+		return c;
+	}
+	
+	public Computer computeThis(Computer c, int y){
+		//System.out.println("I am in Computer "+init);
+		c=c.convert(c);
+		return c;
 	}
 }

@@ -15,4 +15,8 @@ public class Computer{
 		c.convert(c);
 		return c;
 	}
+	
+	public int getInit(){
+		return init;
+	}
 }

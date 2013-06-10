@@ -4,7 +4,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
+import pointsto.ConstraintGraph;
 import pointsto.ConstraintGraphFactory;
+import pointsto.NodeCopiesMap;
 import pointsto.PToAnalysis;
 import soot.Body;
 import soot.PatchingChain;
@@ -24,6 +26,10 @@ public class PToAnalysisTest {
 		this.body=body;
 	}
 
+	public static void main(String[] args){
+		testBranchCloning();
+	}
+	
 	public void investigateReturnStmt(){
 		PatchingChain<Unit> units = this.body.getUnits();
 		Iterator stmtIt = units.snapshotIterator();
@@ -68,7 +74,7 @@ public class PToAnalysisTest {
 
 	}
 
-	protected void investigateOutputs(){
+	public void investigateOutputs(){
 		Iterator<Unit> unitIter=analysis.getUnits();
 		while(unitIter.hasNext()){
 			Unit unit = (Unit) unitIter.next();
@@ -89,6 +95,53 @@ public class PToAnalysisTest {
 				}
 			}
 		}
+	}
+	
+	/** Test the methods in ConstraintGraph.java to replace one variable name for copies of it.
+	 *  The situations tested are both when the variable is a source as well as a successor node. 
+	 */
+	public static void testBranchCloning(){
+		
+		ConstraintGraph graph = new ConstraintGraph();
+		
+		Integer source1 = new Integer(1);
+		Integer source2 = new Integer(2);
+		Integer suc1= new Integer(3);
+		Integer suc2= new Integer(4);
+		Integer suc3=new Integer(5);
+		
+		graph.addSuccessor(source1, suc1);
+		graph.addSuccessor(source1, suc2);
+		graph.addSuccessor(source1, source2);
+		
+		graph.addSuccessor(source2, suc1);
+		graph.addSuccessor(source2, suc2);
+		graph.addSuccessor(source2, suc3);
+		
+		//Initialize copies Map
+		NodeCopiesMap copiesMap = new NodeCopiesMap();
+		
+		Integer copy1Source1=new Integer(10);
+		Integer copy2Source1=new Integer(15);
+		Integer copySuccessor3=new Integer(50);
+		
+		copiesMap.addCopy(source1, copy1Source1);
+		copiesMap.addCopy(source1, copy2Source1);
+		copiesMap.addCopy(suc3,copySuccessor3);
+		
+		System.out.println("--------- Original Constraint Graph ------------");
+		System.out.println(graph.toString());
+		System.out.println("------------------------------------------------");
+
+		System.out.println("---------------- Copies Map ------- ------------");
+		System.out.println(copiesMap.toString());
+		System.out.println("------------------------------------------------");
+		
+		
+		graph.cloneNodes(copiesMap);
+		System.out.println("---------- Cloned Constraint Graph ------------");
+		System.out.println(graph.toString());
+		System.out.println("------------------------------------------------");
 	}
 
 }

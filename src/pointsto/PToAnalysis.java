@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import soot.Body;
 import soot.Local;
@@ -51,7 +52,7 @@ public class PToAnalysis {
 
 
 	/** Initial set of all freeVariables. <Variable hashcode, which is unique>*/
-	private HashMap<Integer,InvokeExpr> callSitesMap= new HashMap<Integer,InvokeExpr>();
+	private HashMap<Integer,HashSet<InvokeExpr>> callSitesMap= new HashMap<Integer,HashSet<InvokeExpr>>();
 
 	/** Keeps track of allocation sites indexed by their hash key*/
 	public HashMap<Integer,String> allocationSiteMap = new HashMap<Integer,String>();
@@ -65,6 +66,12 @@ public class PToAnalysis {
 	/** It is used to keep the statements of the program in a simple the format (a list 
 	 * of Soot Units) */
 	private Body body;
+
+	/** Maps the copies of keys used to arguments and parameters in method calls. 
+	 * The idea is to the new links between these two groups everytime a method is called. 
+	 * So, the solution is to have new parameters references, but keep track of the original ones. 
+	 */
+	private NodeCopiesMap nodeCopiesMap = new NodeCopiesMap();
 
 	public PToAnalysis() {
 		//build constraint graph
@@ -111,7 +118,7 @@ public class PToAnalysis {
 					String className = useValue.toString().substring(colonPosition+1);
 					
 					if(!(className.contains("java")) && !(className.contains("soot"))&&!(className.contains("pointsto"))){
-						this.allocationSiteMap.put(new Integer(defValue.hashCode()), className);
+						this.allocationSiteMap.put(new Integer(defValue.equivHashCode()), className);
 						System.out.println("put IDENTITY defValue: "+ defValue+ ", className:"+className);
 					}
 				}
@@ -130,8 +137,8 @@ public class PToAnalysis {
 									String className = useValue.toString().replaceAll("new", "");
 
 									if(!(className.contains("java")) && !(className.contains("soot"))){
-										this.allocationSiteMap.put(new Integer(useValue.hashCode()), className);
-										System.out.println("put INSTANCE key:"+useValue.hashCode()+", className:"+className);
+										this.allocationSiteMap.put(new Integer(useValue.equivHashCode()), className);
+										System.out.println("put INSTANCE key:"+useValue.equivHashCode()+", className:"+className);
 									}
 								}
 							}
@@ -140,10 +147,20 @@ public class PToAnalysis {
 										((JAssignStmt) unit).getRightOp() instanceof JVirtualInvokeExpr){
 									InvokeExpr stmt = ((JAssignStmt) unit).getInvokeExpr();
 									SootMethod method = stmt.getMethod();
-									Integer key = new Integer(method.hashCode());
-									if(!(method.getSubSignature().contains("java")) && !(method.getSubSignature().contains("soot"))&& !(method.getSubSignature().contains("pointsto"))){
-											this.callSitesMap.put(key,stmt);
-											System.out.println("put METHOD key:"+ key+", method:"+method.getSubSignature());
+									Integer key = new Integer(method.equivHashCode());
+									HashSet<InvokeExpr> set; //used to store the statements (call sites related to the same method)
+									if(!(method.getSignature().contains("java")) 
+											&& !(method.getSignature().contains("soot"))
+											&& !(method.getSignature().contains("pointsto"))){
+										if(callSitesMap.containsKey(key)){
+											set = callSitesMap.get(key);
+										}
+										else{
+											set = new HashSet<InvokeExpr>();
+										}
+										set.add(stmt);
+											this.callSitesMap.put(key,set);
+											System.out.println("put METHOD key:"+ key+", method:"+method.getSignature());
 									}
 								}
 						}
@@ -153,9 +170,17 @@ public class PToAnalysis {
 							System.out.println("JVirtualInvokeStmt---------------------");
 							InvokeExpr stmt = ((JInvokeStmt) unit).getInvokeExpr();
 							SootMethod method = stmt.getMethod();
-							Integer key = new Integer(method.hashCode());
+							Integer key = new Integer(method.equivHashCode());
+							HashSet<InvokeExpr> set; //used to store the statements (call sites related to the same method)
 							if(!(method.getSubSignature().contains("java")) && !(method.getSubSignature().contains("soot"))&& !(method.getSubSignature().contains("pointsto"))){
-								this.callSitesMap.put(key,stmt);
+								if(callSitesMap.containsKey(key)){
+									set = callSitesMap.get(key);
+								}
+								else{
+									set = new HashSet<InvokeExpr>();
+								}
+								set.add(stmt);
+								this.callSitesMap.put(key,set);
 								System.out.println("put METHOD key:"+ key+", method:"+method.getSubSignature());
 							}
 						}
@@ -184,16 +209,16 @@ public class PToAnalysis {
 				if(unit instanceof soot.jimple.internal.JIdentityStmt){
 					Value useValue = ((soot.jimple.internal.JIdentityStmt)unit).getRightOp();
 					Value defValue = ((soot.jimple.internal.JIdentityStmt)unit).getLeftOp();
-					Integer source = new Integer(useValue.hashCode());
-					Integer successor = new Integer(defValue.hashCode());
-					System.out.println("put IDENTITY source: "+ source+ ", successor:"+successor);
+					Integer source = new Integer(useValue.equivHashCode());
+					Integer successor = new Integer(defValue.equivHashCode());
+					System.out.println("put IDENTITY STMT source: "+ source+ ", successor:"+successor);
 					this.constraintGraph.addSuccessor(source, successor);
 				}
 				else
 					if(unit instanceof soot.jimple.internal.JAssignStmt){
 						List<ValueBox> defs = unit.getDefBoxes();
 						Value defValue = defs.get(0).getValue(); //Have only one def
-						System.out.println("defValue: "+ defValue+  ", key: "+defValue.hashCode()+", Class"+defValue.getClass().getName());
+						System.out.println(" ASSIGN STMT, leftOp/defValue: "+ defValue+  ", key: "+defValue.equivHashCode()+", Class"+defValue.getClass().getName());
 
 						//----------------------  So it is an assignment to an instance variable. -------------
 						if((defValue instanceof soot.jimple.internal.JimpleLocal)){ 
@@ -202,8 +227,9 @@ public class PToAnalysis {
 							if(uses.size()==1){
 								Value useValue = uses.get(0).getValue();
 								if((useValue instanceof soot.jimple.internal.JNewExpr) || (useValue instanceof soot.jimple.internal.JimpleLocal)){
-									Integer successor = new Integer(defValue.hashCode());
-									Integer source = new Integer(useValue.hashCode());
+									Integer successor = new Integer(defValue.equivHashCode());
+									Integer source = new Integer(useValue.equivHashCode());
+									
 									this.constraintGraph.addSuccessor(source, successor);
 									System.out.println("put source: "+source+", successor: "+ successor);
 								}
@@ -215,21 +241,26 @@ public class PToAnalysis {
 								if((uses.size()>1)&&
 										((JAssignStmt) unit).getRightOp() instanceof JVirtualInvokeExpr){
 									System.out.println("Resolving return statement: "+((JAssignStmt) unit).getRightOp());
-									System.out.println("DefValue = "+defValue);
+									
 
-									Integer successor = new Integer(defValue.hashCode()); //The def Value of the caller will be successor
+									Integer successor = new Integer(defValue.equivHashCode()); //The def Value of the caller will be successor
 
 									//Now we have to obtain the name to the internal variable returned by the method.
 									Value value = ((JAssignStmt) unit).getRightOp();
 									SootMethod method = ((soot.jimple.internal.JVirtualInvokeExpr) value).getMethod();
+									
+									System.out.println("Successor = "+defValue+"/"+successor+ ", method has ActiveBody "+method.hasActiveBody());
 									if(method.hasActiveBody()){
-										Integer source = this.obtainHashCodeReturnFromMethod(method);
-										System.out.println("put source: "+source+", successor: "+ successor);
-										this.constraintGraph.addSuccessor(source, successor);
-
 										//Now we have to link the parameters and the internal variables of the method.
 										InvokeExpr stmt = ((JAssignStmt) unit).getInvokeExpr();	
-										linkParametersCallerAndCallee(stmt,method);
+										NodeCopiesMap copiesMap = linkParametersCallerAndCallee(stmt,method);
+										
+
+										//Link the return with the variable receiving the result
+										linkCodeReturnFromMethod(method,successor);
+										this.constraintGraph.cloneNodes(copiesMap);
+
+										
 									}
 								}
 						}
@@ -240,8 +271,11 @@ public class PToAnalysis {
 							System.out.println("JVirtualInvokeStmt---------------------");
 							InvokeExpr stmt = ((JInvokeStmt) unit).getInvokeExpr();
 							SootMethod method = stmt.getMethod();
-							if(method.hasActiveBody())
-								linkParametersCallerAndCallee(stmt,method);
+							if(method.hasActiveBody()){
+								NodeCopiesMap copiesMap =linkParametersCallerAndCallee(stmt,method);
+								//Replicate nodes which are copies for the 1-CFA algorithm
+								this.constraintGraph.cloneNodes(copiesMap);
+							}
 						}
 			}
 		}
@@ -249,10 +283,22 @@ public class PToAnalysis {
 	}
 
 
-	protected void linkParametersCallerAndCallee(InvokeExpr stmt, SootMethod method){
+	protected NodeCopiesMap linkParametersCallerAndCallee(InvokeExpr stmt, SootMethod method){
+		System.out.println("--- Linking Caller-Callee ----- -------------");
 		List<ValueBox> invocationList = stmt.getUseBoxes();
 		int j=1;
 		int i=0;
+		
+		//This random value is to create a node hashcode that is distinct from the one provided by soot.
+		//This enables to have distinct method parameter nodes even in face of calling the same 
+		//method multiple times. This is what is needed to have 1-CFA class of analysis instead of zero-CFA.
+		Random rand = new Random(); 
+		int randValue = rand.nextInt(10000); 
+		System.out.println("randValue: "+randValue);
+		
+		NodeCopiesMap localNodesCopies = new NodeCopiesMap();
+
+		
 		while(j<invocationList.size() && i<method.getParameterCount()){
 			Value value= ((ValueBox)invocationList.get(j)).getValue();
 			if((value instanceof JimpleLocal)&&(method.hasActiveBody())){//Only create edge if the parameter is a local instance (i.e., ignore constants)
@@ -261,17 +307,31 @@ public class PToAnalysis {
 				Local local = method.getActiveBody().getParameterLocal(i);
 				System.out.println("------ Local in method="+local.getName()+" class:"+local.getClass().getName());
 
-				Integer source = new Integer(value.hashCode());
-				Integer successor = new Integer(local.hashCode());
-				System.out.println("put source: "+source+", successor: "+ successor);
-				this.constraintGraph.addSuccessor(source, successor);
+				Integer source = new Integer(value.equivHashCode());
+				Integer successor = new Integer(local.equivHashCode());
+				System.out.println("InvokeExpr Caller-Callee source: "+value+ "/"+ source+", successor: "+ local+"/"+ successor);
+				
+				//Need to create copies to obtain the 1-CFA solution	
+				//See also the method cloneNodes(this.constraintGraph,nodeCopiesMap);
+				Integer copyNode=new Integer(randValue+successor.intValue());
+				this.nodeCopiesMap.addCopy(successor, copyNode);
+				localNodesCopies.addCopy(successor, copyNode);
+				System.out.println("put copyMap successor: "+local+ "/"+ successor+", successorCopy: "+ local+"/"+ copyNode);
+				this.constraintGraph.addSuccessor(source, copyNode);
+				System.out.println("InvokeExpr put source: "+value+ "/"+ source+", successorCopy: "+ local+"/"+ copyNode);
+				
+			}
+			else{
+				System.out.println("missed If in linkParametersCallerAndCallee:" +stmt);
 			}
 			i++;
 			j++;
 		}
+		return localNodesCopies;
 	}
 
-	protected Integer obtainHashCodeReturnFromMethod(SootMethod method){
+	protected void linkCodeReturnFromMethod(SootMethod method, Integer successor){
+		System.out.println("--- Linking Return calls -------------");
 		Integer source=null;
 		if(method.hasActiveBody()){
 			Iterator<Unit> iterMB = method.getActiveBody().getUnits().iterator();
@@ -279,13 +339,14 @@ public class PToAnalysis {
 				Unit unitMB= iterMB.next();
 				if(unitMB instanceof JReturnStmt){
 					Value value = ((JReturnStmt)unitMB).getOp();
-					System.out.println("------ return value: "+ value.hashCode()+" value: "+unitMB);
-					source = new Integer(value.hashCode());
-					return source;
+					System.out.println("------ return value: "+unitMB+"/"+value.equivHashCode());
+					source = new Integer(value.equivHashCode());
 				}
 			}
 		}
-		return source;
+		
+		this.constraintGraph.addSuccessor(source, successor);
+		System.out.println("---- Return put source: "+source+", successor: "+ successor);
 	}
 
 
@@ -293,13 +354,14 @@ public class PToAnalysis {
 	 * every path intersection (paths coming from different allocation sites)
 	 * The result of the processing is ready in the datastructure pointsToSet of this class.
 	 */
-	public void runReachability(){
-
+	public void runReachability(){	
+		System.out.print("Running Reachability - traversing the graph...");
+				
 		Iterator<Integer> iterSites = this.allocationSiteMap.keySet().iterator();
 		while(iterSites.hasNext()){
 			Integer key = iterSites.next();
+			//Obtains the className from the allocation site. This will be propagated to all child nodes (descendents)
 			String className = this.allocationSiteMap.get(key);
-			//System.out.println("iter key="+key+", className:"+ className);
 			this.pointsToSet.addNode(key, className);
 			if(this.constraintGraph.nodesMap.get(key)!=null){
 				Iterator<Integer> iterFirstInstance = this.constraintGraph.nodesMap.get(key).iterator();
@@ -307,6 +369,7 @@ public class PToAnalysis {
 				this.performReachabilityAnalysis(succKey, className);
 			}
 		}
+		System.out.println("... Done !");
 	}
 
 
@@ -342,21 +405,26 @@ public class PToAnalysis {
 	}
 
 	public void printResults(){
-		System.out.println("Points to Set ------------- ");
+		System.out.println();
+		System.out.println("Points to Set obtained------------- ");
 		System.out.println(this.pointsToSet);
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 		System.out.println("Possible classes for methods calls from (variable,hashcode)------------------");
 		Iterator<Integer> mKeys = this.callSitesMap.keySet().iterator();
 		while(mKeys.hasNext()){
-			InvokeExpr expr = this.callSitesMap.get(mKeys.next());
-			List<ValueBox> invocationList = expr.getUseBoxes();
-			if((invocationList!=null)&&(invocationList.size()>0)){
-				Value value= ((ValueBox)invocationList.get(0)).getValue();
-				Integer objectKey = new Integer(value.hashCode());
-				if(this.pointsToSet.hasNode(objectKey)){
-					String classes = this.pointsToSet.getStringSet(objectKey);
-					System.out.println("Variable ("+ value+","+objectKey+") CALLS "+expr.getMethod().getSubSignature()+" ON "+ classes);
+			HashSet<InvokeExpr> set = this.callSitesMap.get(mKeys.next()); //used to store the statements (call sites related to the same method)
+			Iterator<InvokeExpr> iter = set.iterator(); 
+			while(iter.hasNext()){
+				InvokeExpr expr = (InvokeExpr) iter.next(); 
+				List<ValueBox> invocationList =  expr.getUseBoxes();
+				if((invocationList!=null)&&(invocationList.size()>0)){
+					Value value= ((ValueBox)invocationList.get(0)).getValue();
+					Integer objectKey = new Integer(value.equivHashCode());
+					if(this.pointsToSet.hasNode(objectKey)){
+						String classes = this.pointsToSet.getStringSet(objectKey);
+						System.out.println("Variable ("+ value+","+objectKey+") CALLS "+expr.getMethod().getSubSignature()+" ON "+ classes);
+					}
 				}
 			}
 		}

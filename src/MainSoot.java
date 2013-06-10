@@ -46,10 +46,10 @@ public class MainSoot {
 
 	public static void main(String[] args){
 
-		//try{
+		try{
 			System.out.println("----------------------------------------");
-			System.out.println("For content of TargetCode3.java, see the file in the current folder");
-			/*File file = new File("TargetCode3.java");
+			System.out.println("For content of TargetCode4.java, see the file in the current folder");
+			File file = new File("./TargetCode4.java");
 			FileInputStream fis = new FileInputStream(file);
 			int oneByte;
 			while ((oneByte = fis.read()) != -1) {
@@ -62,7 +62,7 @@ public class MainSoot {
 				System.out.println("! Please to see the Java File content, put the file TargetCode.java in the same folder of the JarFile");
 				System.out.println();
 			}
-		*/
+		
 		
 		System.out.println(" PLEASE WAIT, PROCESSING ");
 		MyTransformer myTransformer =  new MyTransformer(); 
@@ -71,8 +71,8 @@ public class MainSoot {
 			      
 		Options.v().parse(args);
 		Options.v().set_verbose(false);
-		Options.v().set_whole_program(false); 
-		SootClass c = Scene.v().forceResolve("TargetCode3", SootClass.HIERARCHY);
+		Options.v().set_whole_program(true); 
+		SootClass c = Scene.v().forceResolve("TargetCode4", SootClass.HIERARCHY);
 		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
 		SootMethod method = c.getMethodByName("main");
@@ -85,8 +85,6 @@ public class MainSoot {
 		
 		myTransformer.runReachability();
 		myTransformer.printOutPut();
-		//CallGraph cg = Scene.v().getCallGraph();
-		//Hierarchy hier = Scene.v().getActiveHierarchy();
 	}
 	
 }

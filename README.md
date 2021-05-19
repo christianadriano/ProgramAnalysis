@@ -1,7 +1,15 @@
-# ProgramAnalysis
-Implementations of static analysis algorithms (e.g., constant propagation and zero CFA).
+# About this project
+Implementations of the static analysis algorithms "Constant Propagation" and "0-CFA".
 
-The code stored here is part of my class assignments in the UC Irvine for the Spring Quarter of 2013, course INF 212 
-taught by professor Harry Xu.
+The source code and tests were part of my course project (INF 212) during the Spring Quarter of 2013 at the UC Irvine. 
+The course was taught by professor Harry Xu.
 
-You might copy it as far as it is not for accomplishing your assignment in my same class.
+# Framework adopted
+Soot - A framework for analyzing and transforming Java and Android applications
+http://soot-oss.github.io/soot/
+
+# Bibliography adopted
+Principles of program analysis
+By Flemming Nielson Hanne Riis Nielson Chris Hankin, Flemming Nielson, Hanne R. Nielson, Chris Hankin · 2005
+https://www.google.de/books/edition/Principles_of_Program_Analysis/RLjt0xSj8DcC?hl=en&gbpv=0
+

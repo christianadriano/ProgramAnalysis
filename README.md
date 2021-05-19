@@ -1,5 +1,5 @@
 # About this project
-Implementations of the static analysis algorithms "Constant Propagation" and "0-CFA".
+Implementations of the static analysis algorithms "Constant Propagation" and "1-CFA".
 
 The source code and tests were part of my course project (INF 212) during the Spring Quarter of 2013 at the UC Irvine. 
 The course was taught by professor Harry Xu.
